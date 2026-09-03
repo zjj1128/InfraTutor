@@ -1,0 +1,1415 @@
+schema_version: 0.1.0
+course_id: infratutor_high_speed_interconnect_onboarding
+title: 高速互联新人培训路线
+target_learner: 刚毕业、具备普通计算机基础但缺少 HPC/高速互联经验的计算机专业新人
+authoring_policy:
+  knowledge_source: human_curated
+  llm_role: adaptive_explanation_and_rubric_based_assessment
+  v0_1_hard_edge_type: prerequisite
+stages:
+- id: stage_1_shell_slurm_c
+  order: 1
+  title: Shell / Slurm / C 基础
+  goal: 能够进入集群、理解作业资源、阅读和轻量修改测试程序，并建立进程与内存基础。
+  exit_capabilities:
+  - 能用 Shell 完成常见文件、进程、环境和日志操作
+  - 能区分并使用 salloc、srun、sbatch
+  - 能读懂 C 中的内存、指针和基础编译链接流程
+- id: stage_2_hip_dcu
+  order: 2
+  title: HIP / DCU
+  goal: 理解 CPU 与 DCU 的异构协作、Host/Device 内存和设备拓扑。
+  exit_capabilities:
+  - 能解释 Host code、Kernel 和 DCU 线程层次
+  - 能运行和读懂简单 HIP 程序
+  - 能描述 PCIe、NUMA、DCU 和 HCA 的基本拓扑关系
+- id: stage_3_ib_rdma_theory
+  order: 3
+  title: InfiniBand / RDMA 理论
+  goal: 理解 HCA、DMA、内存注册和 RDMA 数据路径的核心心智模型。
+  exit_capabilities:
+  - 能解释为什么需要 RDMA
+  - 能解释经典 Memory Registration 的作用与边界
+  - 能区分 one-sided、two-sided 和 completion 等基本概念
+- id: stage_4_rdma_verbs
+  order: 4
+  title: RDMA Verbs
+  goal: 把 RDMA 理论映射到 verbs 对象、状态机和基础程序。
+  exit_capabilities:
+  - 能解释 Context、PD、MR、CQ、QP 的关系
+  - 能理解 QP 状态转换和 WR/WQE/SGE
+  - 能运行和修改基础 ping-pong 程序
+- id: stage_5_mpi
+  order: 5
+  title: MPI
+  goal: 理解分布式进程通信模型、P2P、集合通信和 Slurm 启动映射。
+  exit_capabilities:
+  - 能编写和运行基础 MPI 程序
+  - 能区分 blocking、nonblocking 和常见 collective
+  - 能初步分析消息大小、同步和映射对性能的影响
+- id: stage_6_ucx
+  order: 6
+  title: UCX
+  goal: 理解 UCX 分层、对象、传输选择、协议和上层集成。
+  exit_capabilities:
+  - 能解释 UCP、UCT、UCS 的职责
+  - 能查看和理解 UCX 的 transport/device 选择
+  - 能定位常见配置与 progress 问题
+- id: stage_7_rccl
+  order: 7
+  title: RCCL
+  goal: 理解多 DCU 集合通信算法、通道、传输路径和 rccl-tests。
+  exit_capabilities:
+  - 能解释 Ring、Tree、Channel 和拓扑发现
+  - 能运行 rccl-tests 并解释 algbw/busbw
+  - 能使用日志和基础指标观察多节点通信问题
+- id: stage_8_network_data_analysis
+  order: 8
+  title: 网络数据分析
+  goal: 将 benchmark、计数器、日志与拓扑整理成可复现的性能证据。
+  exit_capabilities:
+  - 能设计可靠的测量流程
+  - 能清洗、可视化和关联多层数据
+  - 能形成有结论、有证据的性能报告
+- id: stage_9_network_design_optimization
+  order: 9
+  title: 网络设计与综合性能优化
+  goal: 跨硬件拓扑、网络、运行时和集合通信算法完成设计与系统优化。
+  exit_capabilities:
+  - 能从工作负载通信模式推导网络需求
+  - 能使用对照实验定位跨层瓶颈
+  - 能完成综合设计、优化和评审
+nodes:
+- id: linux_files_permissions
+  stage_id: stage_1_shell_slurm_c
+  title: Linux 文件、路径与权限
+  summary: 理解路径、文件类型、读写执行权限和常见文件操作。
+  type: concept
+  prerequisites: []
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: shell_redirection_pipes
+  stage_id: stage_1_shell_slurm_c
+  title: 重定向、管道与文本流
+  summary: 组合 stdout/stderr、管道和常见文本工具。
+  type: skill
+  prerequisites:
+  - linux_files_permissions
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: processes_signals
+  stage_id: stage_1_shell_slurm_c
+  title: 进程、PID 与信号
+  summary: 理解进程生命周期、前后台任务和常用信号。
+  type: concept
+  prerequisites:
+  - linux_files_permissions
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: environment_variables_paths
+  stage_id: stage_1_shell_slurm_c
+  title: 环境变量、PATH 与库路径
+  summary: 理解进程环境、PATH 和动态库搜索路径。
+  type: concept
+  prerequisites:
+  - linux_files_permissions
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: ssh_scp_rsync
+  stage_id: stage_1_shell_slurm_c
+  title: SSH、SCP 与 rsync
+  summary: 能够安全登录和在本地、登录节点之间传输代码与数据。
+  type: skill
+  prerequisites:
+  - linux_files_permissions
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: shell_scripting_basics
+  stage_id: stage_1_shell_slurm_c
+  title: Shell 脚本基础
+  summary: 编写变量、条件、循环和错误检查脚本。
+  type: skill
+  prerequisites:
+  - shell_redirection_pipes
+  - environment_variables_paths
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: slurm_cluster_model
+  stage_id: stage_1_shell_slurm_c
+  title: Slurm 集群资源模型
+  summary: 理解 partition、node、job、step 和调度关系。
+  type: concept
+  prerequisites:
+  - processes_signals
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: slurm_resource_requests
+  stage_id: stage_1_shell_slurm_c
+  title: Slurm 资源请求
+  summary: 理解节点、CPU、内存、DCU、时间和账户/QOS 请求。
+  type: skill
+  prerequisites:
+  - slurm_cluster_model
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: slurm_salloc_srun_sbatch
+  stage_id: stage_1_shell_slurm_c
+  title: salloc / srun / sbatch
+  summary: 区分交互分配、并行启动和批处理脚本。
+  type: procedure
+  prerequisites:
+  - slurm_resource_requests
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: slurm_jobs_logs_errors
+  stage_id: stage_1_shell_slurm_c
+  title: 作业状态、日志与典型错误
+  summary: 查看作业状态、stdout/stderr、退出码和常见配额错误。
+  type: skill
+  prerequisites:
+  - slurm_salloc_srun_sbatch
+  - shell_redirection_pipes
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: c_memory_model
+  stage_id: stage_1_shell_slurm_c
+  title: C 栈、堆与对象生命周期
+  summary: 理解自动变量、动态内存和生命周期。
+  type: concept
+  prerequisites: []
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: c_pointers_arrays
+  stage_id: stage_1_shell_slurm_c
+  title: C 指针与数组
+  summary: 理解地址、解引用、数组退化和缓冲区。
+  type: skill
+  prerequisites:
+  - c_memory_model
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: c_structs_function_pointers
+  stage_id: stage_1_shell_slurm_c
+  title: 结构体与函数指针
+  summary: 读懂系统库常见结构体和回调形式。
+  type: skill
+  prerequisites:
+  - c_pointers_arrays
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: c_compile_link_make
+  stage_id: stage_1_shell_slurm_c
+  title: 编译、链接、动态库与 Makefile 概览
+  summary: 理解源码到可执行文件、头文件、库和构建规则。
+  type: procedure
+  prerequisites:
+  - c_memory_model
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: linux_dynamic_libraries
+  stage_id: stage_1_shell_slurm_c
+  title: 动态库加载与排查
+  summary: 理解共享库、LD_LIBRARY_PATH 和缺库问题。
+  type: skill
+  prerequisites:
+  - environment_variables_paths
+  - c_compile_link_make
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: accelerator_system_overview
+  stage_id: stage_2_hip_dcu
+  title: 加速器系统概览
+  summary: 理解 CPU、主存、DCU、显存和总线的角色。
+  type: concept
+  prerequisites:
+  - c_memory_model
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: cpu_dcu_execution_model
+  stage_id: stage_2_hip_dcu
+  title: CPU / DCU 执行模型
+  summary: 区分 Host 控制流和 Device 并行执行。
+  type: concept
+  prerequisites:
+  - accelerator_system_overview
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: hip_host_device_memory
+  stage_id: stage_2_hip_dcu
+  title: HIP Host / Device 内存
+  summary: 理解主存、显存、指针所属空间和可访问性。
+  type: concept
+  prerequisites:
+  - cpu_dcu_execution_model
+  - c_memory_model
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: hip_kernels_thread_hierarchy
+  stage_id: stage_2_hip_dcu
+  title: Kernel 与线程层次
+  summary: 理解 Kernel、Thread、Block、Grid 的基本映射。
+  type: concept
+  prerequisites:
+  - cpu_dcu_execution_model
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: hip_memory_copy_allocation
+  stage_id: stage_2_hip_dcu
+  title: HIP 内存分配与拷贝
+  summary: 使用和解释基础分配、释放和拷贝流程。
+  type: skill
+  prerequisites:
+  - hip_host_device_memory
+  - c_pointers_arrays
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: hip_sync_error_model
+  stage_id: stage_2_hip_dcu
+  title: 同步与错误模型
+  summary: 理解异步提交、同步点和错误检查。
+  type: concept
+  prerequisites:
+  - hip_kernels_thread_hierarchy
+  - hip_memory_copy_allocation
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: hip_streams_events
+  stage_id: stage_2_hip_dcu
+  title: Stream 与 Event
+  summary: 理解并发队列、依赖和时间测量。
+  type: concept
+  prerequisites:
+  - hip_sync_error_model
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: pcie_topology_basics
+  stage_id: stage_2_hip_dcu
+  title: PCIe 拓扑基础
+  summary: 理解 Root Complex、Switch、Link 与设备路径。
+  type: concept
+  prerequisites:
+  - accelerator_system_overview
+  recommended_next: []
+  reinforces: []
+  implementation_status: supporting
+- id: numa_locality_basics
+  stage_id: stage_2_hip_dcu
+  title: NUMA 与内存本地性
+  summary: 理解 socket、NUMA node、本地/远端内存访问。
+  type: concept
+  prerequisites:
+  - c_memory_model
+  - accelerator_system_overview
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: dcu_topology_inspection
+  stage_id: stage_2_hip_dcu
+  title: DCU / HCA 拓扑检查
+  summary: 读取设备拓扑并识别跨 NUMA、跨 PCIe Switch 路径。
+  type: skill
+  prerequisites:
+  - pcie_topology_basics
+  - numa_locality_basics
+  - slurm_salloc_srun_sbatch
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: hip_simple_program
+  stage_id: stage_2_hip_dcu
+  title: 简单 HIP 程序
+  summary: 编译、运行并理解一个最小 Kernel 程序。
+  type: lab
+  prerequisites:
+  - hip_kernels_thread_hierarchy
+  - hip_memory_copy_allocation
+  - c_compile_link_make
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: hip_basic_profiling
+  stage_id: stage_2_hip_dcu
+  title: HIP 基础性能观察
+  summary: 正确计时并区分执行、同步和传输开销。
+  type: skill
+  prerequisites:
+  - hip_simple_program
+  - hip_sync_error_model
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: network_stack_basics
+  stage_id: stage_3_ib_rdma_theory
+  title: 网络栈与传统数据路径
+  summary: 理解应用、Socket、内核协议栈、网卡之间的基本路径。
+  type: concept
+  prerequisites:
+  - processes_signals
+  recommended_next: []
+  reinforces: []
+  implementation_status: supporting
+- id: why_rdma
+  stage_id: stage_3_ib_rdma_theory
+  title: 为什么需要 RDMA
+  summary: 从 CPU 开销、拷贝、延迟和远程访问解释 RDMA 动机。
+  type: concept
+  prerequisites:
+  - network_stack_basics
+  recommended_next: []
+  reinforces: []
+  implementation_status: pilot
+- id: ib_fabric_components
+  stage_id: stage_3_ib_rdma_theory
+  title: InfiniBand Fabric 组件
+  summary: 理解 HCA、Switch、Port、Link 和 Fabric。
+  type: concept
+  prerequisites:
+  - network_stack_basics
+  recommended_next: []
+  reinforces: []
+  implementation_status: supporting
+- id: virtual_vs_physical_memory
+  stage_id: stage_3_ib_rdma_theory
+  title: 虚拟地址与物理页
+  summary: 理解程序指针、页表、物理页和地址转换。
+  type: concept
+  prerequisites:
+  - c_memory_model
+  recommended_next: []
+  reinforces: []
+  implementation_status: pilot
+- id: device_dma
+  stage_id: stage_3_ib_rdma_theory
+  title: Device DMA
+  summary: 理解 CPU 配置传输、设备 DMA 引擎搬运数据和完成通知。
+  type: concept
+  prerequisites:
+  - virtual_vs_physical_memory
+  - pcie_topology_basics
+  recommended_next: []
+  reinforces: []
+  implementation_status: pilot
+- id: pinned_memory
+  stage_id: stage_3_ib_rdma_theory
+  title: Pinned Memory
+  summary: 理解设备访问期间内存页稳定性的必要性，且固定不等于复制。
+  type: concept
+  prerequisites:
+  - device_dma
+  - virtual_vs_physical_memory
+  recommended_next: []
+  reinforces: []
+  implementation_status: pilot
+- id: hca_role
+  stage_id: stage_3_ib_rdma_theory
+  title: HCA 的角色
+  summary: 理解 HCA 在主机 PCIe、内存与 IB Fabric 之间的位置和职责。
+  type: concept
+  prerequisites:
+  - ib_fabric_components
+  - pcie_topology_basics
+  recommended_next: []
+  reinforces: []
+  implementation_status: pilot
+- id: rdma_data_path
+  stage_id: stage_3_ib_rdma_theory
+  title: RDMA 数据路径
+  summary: 从本地 buffer、HCA、Fabric 到远端内存描述完整数据流。
+  type: concept
+  prerequisites:
+  - why_rdma
+  - hca_role
+  - device_dma
+  recommended_next: []
+  reinforces: []
+  implementation_status: pilot
+- id: memory_registration
+  stage_id: stage_3_ib_rdma_theory
+  title: RDMA Memory Registration
+  summary: 理解经典 MR 的页固定、地址转换、保护和访问授权，不把它误认为数据复制。
+  type: concept
+  prerequisites:
+  - pinned_memory
+  - hca_role
+  - rdma_data_path
+  recommended_next: []
+  reinforces: []
+  implementation_status: pilot
+- id: lkey_rkey_concept
+  stage_id: stage_3_ib_rdma_theory
+  title: lkey / rkey 概念
+  summary: 理解 key 是本地/远端访问校验与保护能力的一部分，而不是内存地址。
+  type: concept
+  prerequisites:
+  - memory_registration
+  recommended_next: []
+  reinforces: []
+  implementation_status: pilot
+- id: one_sided_two_sided
+  stage_id: stage_3_ib_rdma_theory
+  title: One-sided 与 Two-sided
+  summary: 区分 Send/Recv 与 RDMA Read/Write 的参与方式。
+  type: concept
+  prerequisites:
+  - rdma_data_path
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: rdma_transport_concepts
+  stage_id: stage_3_ib_rdma_theory
+  title: RC / UD 等传输概念
+  summary: 理解可靠连接、无连接等基本传输语义。
+  type: concept
+  prerequisites:
+  - ib_fabric_components
+  - why_rdma
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: completion_model_concept
+  stage_id: stage_3_ib_rdma_theory
+  title: Completion 概念
+  summary: 理解异步工作完成、状态和通知的意义。
+  type: concept
+  prerequisites:
+  - rdma_data_path
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: ib_addressing_basics
+  stage_id: stage_3_ib_rdma_theory
+  title: IB 地址与连接身份基础
+  summary: 认识 LID、GID、QPN 等身份信息的层次。
+  type: concept
+  prerequisites:
+  - ib_fabric_components
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: rdma_performance_model
+  stage_id: stage_3_ib_rdma_theory
+  title: RDMA 延迟与带宽模型
+  summary: 理解小消息延迟、大消息带宽和队列深度等基本影响。
+  type: concept
+  prerequisites:
+  - rdma_data_path
+  - why_rdma
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: verbs_device_context
+  stage_id: stage_4_rdma_verbs
+  title: Verbs Device / Context
+  summary: 发现设备并打开 verbs context。
+  type: procedure
+  prerequisites:
+  - hca_role
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: verbs_protection_domain
+  stage_id: stage_4_rdma_verbs
+  title: Protection Domain
+  summary: 理解 PD 的资源隔离和对象归属。
+  type: concept
+  prerequisites:
+  - verbs_device_context
+  - lkey_rkey_concept
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: verbs_memory_region
+  stage_id: stage_4_rdma_verbs
+  title: Memory Region 对象
+  summary: 把理论 MR 映射到 verbs 注册对象与属性。
+  type: skill
+  prerequisites:
+  - verbs_protection_domain
+  - memory_registration
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: verbs_completion_queue
+  stage_id: stage_4_rdma_verbs
+  title: Completion Queue
+  summary: 创建 CQ 并理解完成项。
+  type: skill
+  prerequisites:
+  - verbs_device_context
+  - completion_model_concept
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: verbs_queue_pair
+  stage_id: stage_4_rdma_verbs
+  title: Queue Pair
+  summary: 理解 Send/Receive Queue 与 QP 属性。
+  type: concept
+  prerequisites:
+  - verbs_protection_domain
+  - verbs_completion_queue
+  - rdma_transport_concepts
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: qp_state_machine
+  stage_id: stage_4_rdma_verbs
+  title: QP 状态机
+  summary: 理解 RESET、INIT、RTR、RTS 的转换条件。
+  type: procedure
+  prerequisites:
+  - verbs_queue_pair
+  - ib_addressing_basics
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: sge_wr_wqe
+  stage_id: stage_4_rdma_verbs
+  title: SGE / WR / WQE
+  summary: 理解 buffer 描述、工作请求和队列项。
+  type: concept
+  prerequisites:
+  - verbs_memory_region
+  - verbs_queue_pair
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: post_send_recv
+  stage_id: stage_4_rdma_verbs
+  title: post_send / post_recv
+  summary: 把 WR 投递到 QP 并理解所有权变化。
+  type: skill
+  prerequisites:
+  - sge_wr_wqe
+  - qp_state_machine
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: cq_polling
+  stage_id: stage_4_rdma_verbs
+  title: CQ Polling
+  summary: 轮询完成项并解释状态和 wr_id。
+  type: skill
+  prerequisites:
+  - verbs_completion_queue
+  - post_send_recv
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: verbs_send_receive
+  stage_id: stage_4_rdma_verbs
+  title: Verbs Send / Receive
+  summary: 实现并理解 two-sided 消息流程。
+  type: skill
+  prerequisites:
+  - post_send_recv
+  - cq_polling
+  - one_sided_two_sided
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: verbs_access_permissions
+  stage_id: stage_4_rdma_verbs
+  title: MR Access Permissions
+  summary: 理解 local write、remote read/write 等权限。
+  type: concept
+  prerequisites:
+  - verbs_memory_region
+  - lkey_rkey_concept
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: verbs_rdma_write_read
+  stage_id: stage_4_rdma_verbs
+  title: RDMA Write / Read
+  summary: 理解 one-sided 操作的本地和远端元数据需求。
+  type: skill
+  prerequisites:
+  - post_send_recv
+  - cq_polling
+  - verbs_access_permissions
+  - one_sided_two_sided
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: verbs_connection_setup
+  stage_id: stage_4_rdma_verbs
+  title: 连接元数据交换
+  summary: 交换地址、QPN、PSN、rkey 等并完成连接。
+  type: procedure
+  prerequisites:
+  - qp_state_machine
+  - ib_addressing_basics
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: verbs_error_handling
+  stage_id: stage_4_rdma_verbs
+  title: Verbs 错误与状态定位
+  summary: 分析 CQE、QP 状态和常见参数错误。
+  type: skill
+  prerequisites:
+  - cq_polling
+  - qp_state_machine
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: verbs_pingpong_lab
+  stage_id: stage_4_rdma_verbs
+  title: RDMA Ping-pong 实验
+  summary: 运行、修改和解释一个基础 verbs ping-pong。
+  type: lab
+  prerequisites:
+  - verbs_send_receive
+  - verbs_connection_setup
+  - verbs_error_handling
+  - slurm_jobs_logs_errors
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: mpi_process_rank
+  stage_id: stage_5_mpi
+  title: MPI Process 与 Rank
+  summary: 理解 SPMD、rank 和进程身份。
+  type: concept
+  prerequisites:
+  - processes_signals
+  - slurm_cluster_model
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: mpi_communicator
+  stage_id: stage_5_mpi
+  title: Communicator
+  summary: 理解通信域、rank 映射和隔离。
+  type: concept
+  prerequisites:
+  - mpi_process_rank
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: mpi_point_to_point_blocking
+  stage_id: stage_5_mpi
+  title: Blocking Point-to-Point
+  summary: 理解 Send/Recv 的匹配和阻塞语义。
+  type: skill
+  prerequisites:
+  - mpi_communicator
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: mpi_nonblocking
+  stage_id: stage_5_mpi
+  title: Nonblocking Point-to-Point
+  summary: 理解 Request、Isend/Irecv、Wait 和重叠。
+  type: skill
+  prerequisites:
+  - mpi_point_to_point_blocking
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: mpi_collectives
+  stage_id: stage_5_mpi
+  title: MPI Collectives
+  summary: 理解 Broadcast、Reduce、AllReduce、AllGather、ReduceScatter。
+  type: skill
+  prerequisites:
+  - mpi_communicator
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: mpi_datatypes
+  stage_id: stage_5_mpi
+  title: MPI Datatype
+  summary: 描述非连续数据布局并避免手工打包。
+  type: skill
+  prerequisites:
+  - c_memory_model
+  - mpi_communicator
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: mpi_synchronization_progress
+  stage_id: stage_5_mpi
+  title: 同步与 Progress
+  summary: 理解 Barrier、完成、进展和潜在死锁。
+  type: concept
+  prerequisites:
+  - mpi_nonblocking
+  - mpi_collectives
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: mpi_process_launch_slurm
+  stage_id: stage_5_mpi
+  title: Slurm 启动 MPI
+  summary: 理解 allocation、launcher、进程数量与节点分布。
+  type: procedure
+  prerequisites:
+  - mpi_process_rank
+  - slurm_salloc_srun_sbatch
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: mpi_topology_mapping
+  stage_id: stage_5_mpi
+  title: Rank / CPU / DCU Mapping
+  summary: 理解进程绑定和设备映射。
+  type: skill
+  prerequisites:
+  - mpi_process_launch_slurm
+  - dcu_topology_inspection
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: mpi_performance_model
+  stage_id: stage_5_mpi
+  title: MPI 性能模型
+  summary: 分析消息大小、同步、并发与 collective 成本。
+  type: concept
+  prerequisites:
+  - mpi_point_to_point_blocking
+  - mpi_collectives
+  - rdma_performance_model
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: mpi_transport_stack
+  stage_id: stage_5_mpi
+  title: MPI 与底层传输栈
+  summary: 理解 MPI 实现如何使用共享内存、UCX/OFI 或网络传输。
+  type: concept
+  prerequisites:
+  - mpi_point_to_point_blocking
+  - why_rdma
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: mpi_basic_labs
+  stage_id: stage_5_mpi
+  title: MPI 基础实验
+  summary: 在 Slurm 下运行 P2P、Nonblocking 与 Collective 示例。
+  type: lab
+  prerequisites:
+  - mpi_nonblocking
+  - mpi_collectives
+  - mpi_process_launch_slurm
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: ucx_stack_ucp_uct_ucs
+  stage_id: stage_6_ucx
+  title: UCS / UCT / UCP 分层
+  summary: 理解 UCX 三层职责和抽象边界。
+  type: concept
+  prerequisites:
+  - why_rdma
+  - verbs_pingpong_lab
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: ucx_context_worker_endpoint
+  stage_id: stage_6_ucx
+  title: Context / Worker / Endpoint
+  summary: 理解 UCX 通信对象与线程、连接关系。
+  type: concept
+  prerequisites:
+  - ucx_stack_ucp_uct_ucs
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: ucx_memory_registration
+  stage_id: stage_6_ucx
+  title: UCX Memory Registration
+  summary: 理解 UCX 如何管理注册、缓存和访问内存。
+  type: concept
+  prerequisites:
+  - ucx_context_worker_endpoint
+  - memory_registration
+  - verbs_memory_region
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: ucx_transport_selection
+  stage_id: stage_6_ucx
+  title: Transport / Device Selection
+  summary: 理解可用 transport、设备和选择规则。
+  type: concept
+  prerequisites:
+  - ucx_stack_ucp_uct_ucs
+  - ib_fabric_components
+  - pcie_topology_basics
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: ucx_tag_api
+  stage_id: stage_6_ucx
+  title: UCX Tag API
+  summary: 理解匹配式消息通信。
+  type: skill
+  prerequisites:
+  - ucx_context_worker_endpoint
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: ucx_rma_am
+  stage_id: stage_6_ucx
+  title: UCX RMA / Active Message
+  summary: 理解 RMA 与主动消息的基本语义。
+  type: skill
+  prerequisites:
+  - ucx_context_worker_endpoint
+  - one_sided_two_sided
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: ucx_eager_rendezvous
+  stage_id: stage_6_ucx
+  title: Eager / Rendezvous
+  summary: 理解消息大小驱动的协议选择。
+  type: concept
+  prerequisites:
+  - ucx_tag_api
+  - rdma_performance_model
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: ucx_progress_model
+  stage_id: stage_6_ucx
+  title: UCX Progress Model
+  summary: 理解 worker progress、异步完成和线程影响。
+  type: concept
+  prerequisites:
+  - ucx_context_worker_endpoint
+  - completion_model_concept
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: ucx_configuration_tools
+  stage_id: stage_6_ucx
+  title: UCX 配置与观察工具
+  summary: 使用配置变量和工具查看能力、transport 与设备。
+  type: skill
+  prerequisites:
+  - ucx_transport_selection
+  - environment_variables_paths
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: ucx_topology_multirail
+  stage_id: stage_6_ucx
+  title: UCX Topology / Multi-rail
+  summary: 理解多设备、多 rail 和拓扑选择。
+  type: concept
+  prerequisites:
+  - ucx_transport_selection
+  - dcu_topology_inspection
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: ucx_mpi_integration
+  stage_id: stage_6_ucx
+  title: MPI 与 UCX 集成
+  summary: 理解 MPI 调用如何落到 UCX 通信路径。
+  type: concept
+  prerequisites:
+  - ucx_stack_ucp_uct_ucs
+  - mpi_transport_stack
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: ucx_debug_performance_lab
+  stage_id: stage_6_ucx
+  title: UCX 调试与性能实验
+  summary: 观察协议、设备、进展与多 rail 配置效果。
+  type: lab
+  prerequisites:
+  - ucx_configuration_tools
+  - ucx_eager_rendezvous
+  - ucx_progress_model
+  - ucx_topology_multirail
+  - ucx_mpi_integration
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: collective_primitives
+  stage_id: stage_7_rccl
+  title: 集合通信原语
+  summary: 区分 AllReduce、Broadcast、AllGather、ReduceScatter 等语义。
+  type: concept
+  prerequisites:
+  - mpi_collectives
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: collective_cost_model
+  stage_id: stage_7_rccl
+  title: 集合通信成本模型
+  summary: 估算通信量、步骤数、延迟项和带宽项。
+  type: concept
+  prerequisites:
+  - collective_primitives
+  - mpi_performance_model
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: rccl_architecture
+  stage_id: stage_7_rccl
+  title: RCCL 架构概览
+  summary: 理解上层调用、算法选择、拓扑、通道和传输层。
+  type: concept
+  prerequisites:
+  - cpu_dcu_execution_model
+  - collective_primitives
+  - ucx_stack_ucp_uct_ucs
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: rccl_topology_discovery
+  stage_id: stage_7_rccl
+  title: RCCL Topology Discovery
+  summary: 理解 CPU、DCU、PCIe、HCA 和网络拓扑如何被建模。
+  type: concept
+  prerequisites:
+  - rccl_architecture
+  - dcu_topology_inspection
+  - ucx_topology_multirail
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: rccl_ring_tree_algorithms
+  stage_id: stage_7_rccl
+  title: Ring / Tree 算法
+  summary: 理解不同算法的数据流与适用场景。
+  type: concept
+  prerequisites:
+  - rccl_architecture
+  - collective_cost_model
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: rccl_channels
+  stage_id: stage_7_rccl
+  title: RCCL Channels
+  summary: 理解通道并行与资源切分的作用。
+  type: concept
+  prerequisites:
+  - rccl_ring_tree_algorithms
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: rccl_transport_paths
+  stage_id: stage_7_rccl
+  title: RCCL Transport Paths
+  summary: 理解 P2P、共享内存和网络通信路径。
+  type: concept
+  prerequisites:
+  - rccl_architecture
+  - ucx_stack_ucp_uct_ucs
+  - verbs_pingpong_lab
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: rccl_process_device_mapping
+  stage_id: stage_7_rccl
+  title: Rank / Process / DCU Mapping
+  summary: 理解进程与设备绑定对集合通信的影响。
+  type: concept
+  prerequisites:
+  - mpi_topology_mapping
+  - cpu_dcu_execution_model
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: rccl_environment_configuration
+  stage_id: stage_7_rccl
+  title: RCCL 环境变量与配置层次
+  summary: 理解常用开关控制算法、传输、通道或调试。
+  type: skill
+  prerequisites:
+  - rccl_architecture
+  - environment_variables_paths
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: rccl_tests_usage
+  stage_id: stage_7_rccl
+  title: rccl-tests 使用
+  summary: 配置进程、设备、消息范围并运行集合通信基准。
+  type: lab
+  prerequisites:
+  - rccl_architecture
+  - slurm_salloc_srun_sbatch
+  - rccl_process_device_mapping
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: algbw_busbw
+  stage_id: stage_7_rccl
+  title: algbw 与 busbw
+  summary: 解释两种带宽指标及其与 collective 数据量的关系。
+  type: concept
+  prerequisites:
+  - rccl_tests_usage
+  - collective_cost_model
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: rccl_logs_tracing
+  stage_id: stage_7_rccl
+  title: RCCL 日志与 Tracing
+  summary: 获取、筛选并关联关键日志。
+  type: skill
+  prerequisites:
+  - rccl_tests_usage
+  - shell_redirection_pipes
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: rccl_multi_node_lab
+  stage_id: stage_7_rccl
+  title: RCCL 多节点实验
+  summary: 运行多节点测试并核对拓扑、映射和传输。
+  type: lab
+  prerequisites:
+  - rccl_tests_usage
+  - rccl_transport_paths
+  - rccl_environment_configuration
+  - slurm_jobs_logs_errors
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: rccl_bottleneck_patterns
+  stage_id: stage_7_rccl
+  title: RCCL 常见瓶颈模式
+  summary: 识别小消息延迟、大消息带宽、拓扑和拥塞问题。
+  type: concept
+  prerequisites:
+  - algbw_busbw
+  - rccl_logs_tracing
+  - rccl_multi_node_lab
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: metrics_latency_bandwidth
+  stage_id: stage_8_network_data_analysis
+  title: 延迟、带宽与消息率
+  summary: 定义并正确解释核心通信指标。
+  type: concept
+  prerequisites:
+  - rdma_performance_model
+  - algbw_busbw
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: measurement_methodology
+  stage_id: stage_8_network_data_analysis
+  title: 测量方法与基线
+  summary: 理解 warm-up、重复、噪声、变量控制和统计摘要。
+  type: concept
+  prerequisites:
+  - metrics_latency_bandwidth
+  - hip_basic_profiling
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: linux_network_counters
+  stage_id: stage_8_network_data_analysis
+  title: Linux / NIC Counters
+  summary: 采集接口、驱动和系统层计数器。
+  type: skill
+  prerequisites:
+  - linux_files_permissions
+  - network_stack_basics
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: ib_counters_tools
+  stage_id: stage_8_network_data_analysis
+  title: InfiniBand Counters 与工具
+  summary: 读取端口状态、错误、流量与链路信息。
+  type: skill
+  prerequisites:
+  - ib_fabric_components
+  - slurm_salloc_srun_sbatch
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: rccl_log_parsing
+  stage_id: stage_8_network_data_analysis
+  title: RCCL 日志结构化解析
+  summary: 将多进程日志清洗为可分析记录。
+  type: skill
+  prerequisites:
+  - rccl_logs_tracing
+  - shell_scripting_basics
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: time_series_cleaning
+  stage_id: stage_8_network_data_analysis
+  title: 时间序列与数据清洗
+  summary: 统一单位、处理缺失、对齐时间与过滤异常采样。
+  type: skill
+  prerequisites:
+  - shell_scripting_basics
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: visualization_basics
+  stage_id: stage_8_network_data_analysis
+  title: 性能数据可视化
+  summary: 选择曲线、分布、热力图和拓扑视图。
+  type: skill
+  prerequisites:
+  - time_series_cleaning
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: topology_data_model
+  stage_id: stage_8_network_data_analysis
+  title: 拓扑数据模型
+  summary: 把节点、NUMA、PCIe、DCU、HCA、Switch 表达为可关联结构。
+  type: concept
+  prerequisites:
+  - rccl_topology_discovery
+  - ib_fabric_components
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: anomaly_detection_rules
+  stage_id: stage_8_network_data_analysis
+  title: 异常检测规则
+  summary: 使用基线、阈值、趋势和上下文识别异常。
+  type: concept
+  prerequisites:
+  - metrics_latency_bandwidth
+  - measurement_methodology
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: cross_layer_correlation
+  stage_id: stage_8_network_data_analysis
+  title: 跨层数据关联
+  summary: 关联应用、通信库、OS、PCIe、NIC 和 Fabric 证据。
+  type: concept
+  prerequisites:
+  - linux_network_counters
+  - ib_counters_tools
+  - rccl_log_parsing
+  - topology_data_model
+  - measurement_methodology
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: reproducible_benchmark
+  stage_id: stage_8_network_data_analysis
+  title: 可复现 Benchmark
+  summary: 固定环境、命令、版本、参数和数据记录。
+  type: procedure
+  prerequisites:
+  - measurement_methodology
+  - slurm_jobs_logs_errors
+  - rccl_tests_usage
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: performance_report
+  stage_id: stage_8_network_data_analysis
+  title: 性能分析报告
+  summary: 形成现象、假设、证据、结论和下一步。
+  type: skill
+  prerequisites:
+  - visualization_basics
+  - cross_layer_correlation
+  - reproducible_benchmark
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: workload_communication_patterns
+  stage_id: stage_9_network_design_optimization
+  title: 工作负载通信模式
+  summary: 识别数据并行、张量并行、流水并行等模式。
+  type: concept
+  prerequisites:
+  - collective_primitives
+  - mpi_point_to_point_blocking
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: requirements_slo
+  stage_id: stage_9_network_design_optimization
+  title: 需求、SLO 与约束
+  summary: 把吞吐、延迟、规模、可靠性和成本转为设计约束。
+  type: concept
+  prerequisites:
+  - metrics_latency_bandwidth
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: bottleneck_modeling
+  stage_id: stage_9_network_design_optimization
+  title: 瓶颈建模
+  summary: 建立计算、内存、PCIe、网络和同步的上界模型。
+  type: concept
+  prerequisites:
+  - workload_communication_patterns
+  - requirements_slo
+  - cross_layer_correlation
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: numa_pcie_placement_optimization
+  stage_id: stage_9_network_design_optimization
+  title: NUMA / PCIe 放置优化
+  summary: 优化 CPU、内存、DCU、HCA 的亲和与路径。
+  type: skill
+  prerequisites:
+  - dcu_topology_inspection
+  - topology_data_model
+  - bottleneck_modeling
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: network_topology_design
+  stage_id: stage_9_network_design_optimization
+  title: 网络拓扑设计
+  summary: 根据规模、流量和容错选择拓扑与带宽配置。
+  type: concept
+  prerequisites:
+  - ib_fabric_components
+  - requirements_slo
+  - bottleneck_modeling
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: rail_oversubscription
+  stage_id: stage_9_network_design_optimization
+  title: Rail 与超售设计
+  summary: 理解多 rail、上联带宽和超售比。
+  type: concept
+  prerequisites:
+  - network_topology_design
+  - ucx_topology_multirail
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: routing_traffic_balance
+  stage_id: stage_9_network_design_optimization
+  title: 路由、拥塞与流量平衡
+  summary: 理解路径选择、热点和负载均衡。
+  type: concept
+  prerequisites:
+  - network_topology_design
+  - ib_addressing_basics
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: collective_algorithm_tuning
+  stage_id: stage_9_network_design_optimization
+  title: 集合通信算法调优
+  summary: 根据拓扑、消息大小和规模选择算法。
+  type: skill
+  prerequisites:
+  - rccl_ring_tree_algorithms
+  - collective_cost_model
+  - bottleneck_modeling
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: software_stack_parameter_tuning
+  stage_id: stage_9_network_design_optimization
+  title: 通信栈参数调优
+  summary: 系统调节 UCX、MPI、RCCL 相关参数并避免无效搜索。
+  type: skill
+  prerequisites:
+  - ucx_configuration_tools
+  - rccl_environment_configuration
+  - bottleneck_modeling
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: experiment_design_ab
+  stage_id: stage_9_network_design_optimization
+  title: 实验设计与 A/B 对照
+  summary: 设计单变量、重复、回归和反证实验。
+  type: procedure
+  prerequisites:
+  - measurement_methodology
+  - reproducible_benchmark
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: root_cause_method
+  stage_id: stage_9_network_design_optimization
+  title: 跨层 Root Cause 方法
+  summary: 从现象到假设、证据、排除和根因。
+  type: skill
+  prerequisites:
+  - cross_layer_correlation
+  - bottleneck_modeling
+  - experiment_design_ab
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: capacity_planning
+  stage_id: stage_9_network_design_optimization
+  title: 容量规划
+  summary: 从工作负载和 SLO 估算设备、链路和扩展余量。
+  type: skill
+  prerequisites:
+  - requirements_slo
+  - network_topology_design
+  - workload_communication_patterns
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: integrated_case_study
+  stage_id: stage_9_network_design_optimization
+  title: 综合设计与优化案例
+  summary: 完成从需求、测量、定位到优化验证的完整案例。
+  type: checkpoint
+  prerequisites:
+  - numa_pcie_placement_optimization
+  - rail_oversubscription
+  - routing_traffic_balance
+  - collective_algorithm_tuning
+  - software_stack_parameter_tuning
+  - root_cause_method
+  - capacity_planning
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned
+- id: final_design_review
+  stage_id: stage_9_network_design_optimization
+  title: 最终设计评审
+  summary: 陈述设计、证据、取舍、风险和后续计划。
+  type: checkpoint
+  prerequisites:
+  - integrated_case_study
+  - performance_report
+  recommended_next: []
+  reinforces: []
+  implementation_status: planned

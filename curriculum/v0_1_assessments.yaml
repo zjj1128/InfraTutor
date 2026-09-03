@@ -1,0 +1,477 @@
+schema_version: 0.1.0
+assessment_set_id: v0_1_rdma_memory_registration_assessments
+language: zh-CN
+scoring_policy:
+  met_value: 1.0
+  uncertain_value: 0.5
+  not_met_value: 0.0
+  backend_recalculates_score: true
+  model_score_is_advisory: true
+assessments:
+- id: vm_q1_pointer_kind
+  node_id: virtual_vs_physical_memory
+  title: malloc 返回的是什么地址
+  question_type: single_choice
+  evidence_type: recognition
+  prompt: 在普通用户态程序中，`char *buf = malloc(1 << 20)` 得到的 `buf` 通常表示什么？
+  rubric:
+    criteria:
+    - id: vm_q1_identifies_virtual
+      description: 指出 buf 是当前进程虚拟地址
+      weight: 1.0
+      required_for_mastery: true
+    critical_misconception_ids:
+    - virtual_address_is_physical_address
+  hints:
+  - 先想想普通程序是否能够直接选择任意物理地址。
+  mock_fixtures: []
+  options:
+  - id: virtual
+    text: 当前进程中的虚拟地址
+  - id: physical
+    text: 机器 DRAM 的物理地址
+  - id: hca
+    text: HCA 内部内存地址
+  correct_option_ids:
+  - virtual
+- id: vm_q2_translation_scenario
+  node_id: virtual_vs_physical_memory
+  title: 虚拟连续与物理页场景
+  question_type: free_text
+  evidence_type: scenario_transfer
+  prompt: 程序申请了一块看起来连续的 1 GB 虚拟地址区间。请解释它为什么不一定对应一整块物理连续内存，以及系统需要什么机制找到实际物理页。
+  rubric:
+    criteria:
+    - id: vm_q2_virtual_contiguous
+      description: 说明虚拟地址区间可以连续
+      weight: 0.25
+      required_for_mastery: true
+    - id: vm_q2_physical_pages
+      description: 说明背后可映射到多个物理页且不必物理连续
+      weight: 0.45
+      required_for_mastery: true
+    - id: vm_q2_translation
+      description: 提到页表或等价地址转换机制
+      weight: 0.3
+      required_for_mastery: true
+    critical_misconception_ids:
+    - virtual_contiguous_means_physical_contiguous
+  hints: []
+  mock_fixtures: []
+- id: dma_q1_actor
+  node_id: device_dma
+  title: 谁真正搬运 DMA 数据
+  question_type: single_choice
+  evidence_type: recognition
+  prompt: CPU 已经为一次 DMA 传输准备好描述信息并启动设备。随后真正沿 PCIe 在设备和主存之间搬运有效负载的主体通常是谁？
+  rubric:
+    criteria:
+    - id: dma_q1_device_engine
+      description: 选择设备/DMA 引擎而不是 CPU 字节复制循环
+      weight: 1.0
+      required_for_mastery: true
+    critical_misconception_ids:
+    - dma_is_cpu_memcpy
+  hints:
+  - 区分‘谁配置工作’与‘谁搬运 payload’。
+  mock_fixtures: []
+  options:
+  - id: cpu_loop
+    text: CPU 执行逐字节 memcpy 循环
+  - id: device_dma
+    text: 设备或其 DMA 引擎
+  - id: switch
+    text: 网络交换机直接读取主存
+  correct_option_ids:
+  - device_dma
+- id: dma_q2_scenario
+  node_id: device_dma
+  title: DMA 控制流与完成场景
+  question_type: free_text
+  evidence_type: scenario_transfer
+  prompt: 一次异步设备传输中，CPU、DMA 引擎和完成事件分别承担什么角色？为什么提交成功不等于传输已经完成？
+  rubric:
+    criteria:
+    - id: dma_q2_cpu_configures
+      description: 说明 CPU/软件准备并提交传输工作
+      weight: 0.25
+      required_for_mastery: true
+    - id: dma_q2_device_moves
+      description: 说明设备/DMA 引擎搬运数据，CPU 不逐字节复制
+      weight: 0.4
+      required_for_mastery: true
+    - id: dma_q2_completion
+      description: 说明需要完成通知、轮询或同步确认完成
+      weight: 0.35
+      required_for_mastery: true
+    critical_misconception_ids:
+    - dma_is_cpu_memcpy
+    - dma_needs_no_completion
+  hints:
+  - 先分别写出：提交者、搬运者、完成确认者。
+  mock_fixtures:
+  - contains_any:
+    - CPU自己复制
+    - CPU 复制
+    assessment: dma_is_cpu_memcpy
+  - contains_all:
+    - CPU
+    - 配置
+    - DMA
+    - 搬运
+    - 完成
+    assessment: correct
+- id: pin_q1_page_stability
+  node_id: pinned_memory
+  title: 设备访问期间页面为何要稳定
+  question_type: free_text
+  evidence_type: free_explanation
+  prompt: HCA 正在访问一段主机内存时，如果操作系统可以随时换出或重新映射相关页面，可能出现什么问题？Pinned Memory 在这里解决什么？
+  rubric:
+    criteria:
+    - id: pin_q1_mapping_risk
+      description: 说明页面变化会使设备正在使用的映射失效或访问错误
+      weight: 0.4
+      required_for_mastery: true
+    - id: pin_q1_stability
+      description: 说明 pin 保证访问有效期内页面可用/稳定
+      weight: 0.4
+      required_for_mastery: true
+    - id: pin_q1_not_copy
+      description: 明确 pin 不等于把数据复制到设备
+      weight: 0.2
+      required_for_mastery: true
+    critical_misconception_ids:
+    - pinning_copies_buffer_to_device
+  hints: []
+  mock_fixtures: []
+- id: pin_q2_copy_check
+  node_id: pinned_memory
+  title: Pin 是否会复制数据
+  question_type: single_choice
+  evidence_type: scenario_transfer
+  prompt: 将一组主机内存页 pin 住之后，下面哪项最准确？
+  rubric:
+    criteria:
+    - id: pin_q2_stability_not_copy
+      description: 选择页稳定/不可换出，而不是复制或物理连续
+      weight: 1.0
+      required_for_mastery: true
+    critical_misconception_ids:
+    - pinning_copies_buffer_to_device
+    - pinning_makes_memory_physically_contiguous
+  hints: []
+  mock_fixtures: []
+  options:
+  - id: copied
+    text: 数据已经整体复制到 HCA 或 DCU 内存
+  - id: contiguous
+    text: 所有物理页自动变成连续的一整块
+  - id: stable
+    text: 相关页面在所需期间保持可访问和稳定，但数据仍在原内存中
+  correct_option_ids:
+  - stable
+- id: hca_q1_role_path
+  node_id: hca_role
+  title: HCA 在数据路径中的角色
+  question_type: free_text
+  evidence_type: free_explanation
+  prompt: 请用 CPU、主存、PCIe、HCA、IB Switch 这些词，描述 HCA 在主机和网络之间的位置与主要职责。
+  rubric:
+    criteria:
+    - id: hca_q1_position
+      description: 把 HCA 放在主机 PCIe 与 IB Fabric 之间
+      weight: 0.35
+      required_for_mastery: true
+    - id: hca_q1_dma
+      description: 提到 HCA 对主机内存的 DMA 访问
+      weight: 0.3
+      required_for_mastery: true
+    - id: hca_q1_protocol_queue
+      description: 提到队列/协议/网络处理中的至少一项
+      weight: 0.2
+      required_for_mastery: false
+    - id: hca_q1_not_storage
+      description: 不把 HCA 描述为保存整个用户 buffer 的内存仓库
+      weight: 0.15
+      required_for_mastery: true
+    critical_misconception_ids:
+    - hca_is_only_a_network_cable
+    - hca_stores_registered_buffer
+  hints: []
+  mock_fixtures: []
+- id: hca_q2_buffer_location
+  node_id: hca_role
+  title: 注册后数据在哪里
+  question_type: single_choice
+  evidence_type: scenario_transfer
+  prompt: 一个普通主机 buffer 完成经典 RDMA Memory Registration 后，它的有效负载通常仍主要位于哪里？
+  rubric:
+    criteria:
+    - id: hca_q2_host_memory
+      description: 选择原主机内存
+      weight: 1.0
+      required_for_mastery: true
+    critical_misconception_ids:
+    - hca_stores_registered_buffer
+    - mr_copies_memory_to_hca
+  hints: []
+  mock_fixtures: []
+  options:
+  - id: host_memory
+    text: 原来的主机内存区域
+  - id: hca_memory
+    text: HCA 内部新分配的一份完整副本
+  - id: switch_memory
+    text: IB Switch 的转发表内存
+  correct_option_ids:
+  - host_memory
+- id: why_rdma_q1_compare_path
+  node_id: why_rdma
+  title: 传统路径与 RDMA 动机
+  question_type: free_text
+  evidence_type: free_explanation
+  prompt: 与传统 Socket 数据路径相比，RDMA 试图减少哪些开销？请至少从 CPU 参与、数据路径或远程访问语义中的两个角度回答。
+  rubric:
+    criteria:
+    - id: why_q1_cpu
+      description: 提到减少 CPU 对 payload 搬运或协议路径的参与
+      weight: 0.35
+      required_for_mastery: true
+    - id: why_q1_path
+      description: 提到更直接的数据路径、减少中间拷贝或内核路径
+      weight: 0.35
+      required_for_mastery: true
+    - id: why_q1_semantics
+      description: 提到远程内存语义、低延迟或高吞吐中的合理一点
+      weight: 0.3
+      required_for_mastery: false
+    critical_misconception_ids:
+    - rdma_is_only_faster_nic
+    - rdma_means_no_cpu_work_at_all
+  hints: []
+  mock_fixtures: []
+- id: why_rdma_q2_tradeoff
+  node_id: why_rdma
+  title: RDMA 不是零成本魔法
+  question_type: free_text
+  evidence_type: scenario_transfer
+  prompt: 为什么不能把 RDMA 理解成‘完全不需要 CPU、没有队列和保护机制的直接内存访问’？
+  rubric:
+    criteria:
+    - id: why_q2_control
+      description: 说明 CPU/软件仍需创建资源、提交或处理完成
+      weight: 0.35
+      required_for_mastery: true
+    - id: why_q2_queue
+      description: 提到队列、完成或连接等控制机制
+      weight: 0.3
+      required_for_mastery: false
+    - id: why_q2_protection
+      description: 提到内存注册、权限或 key 保护
+      weight: 0.35
+      required_for_mastery: true
+    critical_misconception_ids:
+    - rdma_means_no_cpu_work_at_all
+    - rdma_bypasses_all_software
+    - rdma_can_access_any_remote_memory
+  hints: []
+  mock_fixtures: []
+- id: path_q1_order
+  node_id: rdma_data_path
+  title: 排列 RDMA 数据路径
+  question_type: single_choice
+  evidence_type: recognition
+  prompt: 下面哪条最接近一次本地到远端的 RDMA payload 数据路径？
+  rubric:
+    criteria:
+    - id: path_q1_correct_order
+      description: 选择应用 buffer → 本地 HCA → Fabric → 远端 HCA → 远端 buffer
+      weight: 1.0
+      required_for_mastery: true
+    critical_misconception_ids:
+    - remote_cpu_always_copies_payload
+  hints: []
+  mock_fixtures: []
+  options:
+  - id: correct
+    text: 本地应用 buffer → 本地 HCA → Fabric → 远端 HCA → 远端已授权 buffer
+  - id: remote_cpu
+    text: 本地 buffer → 本地 CPU memcpy → 远端 CPU memcpy → 远端 buffer
+  - id: switch_store
+    text: 本地 HCA → Switch 永久存储 → 远端应用读取
+  correct_option_ids:
+  - correct
+- id: path_q2_remote_scenario
+  node_id: rdma_data_path
+  title: 控制流与 payload 场景
+  question_type: free_text
+  evidence_type: scenario_transfer
+  prompt: 应用提交一个 RDMA 操作后，本地 CPU、本地 HCA、远端 HCA 和远端 CPU 各自是否必须逐字节搬运 payload？请描述主要控制流和数据流。
+  rubric:
+    criteria:
+    - id: path_q2_local_cpu
+      description: 说明本地 CPU/软件提交工作但不逐字节搬运 payload
+      weight: 0.25
+      required_for_mastery: true
+    - id: path_q2_hcas
+      description: 说明本地和远端 HCA 参与网络与内存 DMA
+      weight: 0.4
+      required_for_mastery: true
+    - id: path_q2_remote_cpu
+      description: 说明远端 CPU 不一定参与每次 payload 复制
+      weight: 0.2
+      required_for_mastery: true
+    - id: path_q2_controls
+      description: 提到注册、队列、完成或权限仍然存在
+      weight: 0.15
+      required_for_mastery: false
+    critical_misconception_ids:
+    - remote_cpu_always_copies_payload
+    - rdma_bypasses_all_software
+  hints: []
+  mock_fixtures: []
+- id: mr_q1_copy_check
+  node_id: memory_registration
+  title: Golden Path：MR 是否复制到 HCA
+  question_type: free_text
+  evidence_type: short_answer
+  prompt: 你觉得 RDMA Memory Registration 会不会把用户 buffer 复制到 HCA 内部？请说明你认为注册后发生了什么。
+  rubric:
+    criteria:
+    - id: mr_q1_not_copy
+      description: 明确说明不会因为 MR 把整个 buffer 复制到 HCA
+      weight: 0.4
+      required_for_mastery: true
+    - id: mr_q1_host_location
+      description: 说明有效负载仍在主机内存
+      weight: 0.25
+      required_for_mastery: true
+    - id: mr_q1_mapping_protection
+      description: 提到页稳定、地址映射/转换、权限/key 中至少两项
+      weight: 0.35
+      required_for_mastery: true
+    critical_misconception_ids:
+    - mr_copies_memory_to_hca
+    - mr_registers_hca_memory
+    - hca_can_access_any_user_pointer
+  hints:
+  - 先回答：注册前后的有效负载究竟放在哪里？
+  mock_fixtures:
+  - contains_all:
+    - 复制
+    - HCA
+    assessment: mr_copies_memory_to_hca
+  - contains_all:
+    - 主机内存
+    - 不会
+    - 映射
+    - 权限
+    assessment: correct
+- id: mr_q2_explain
+  node_id: memory_registration
+  title: 解释 Memory Registration 的作用
+  question_type: free_text
+  evidence_type: free_explanation
+  prompt: 请不用背 API，按‘内存稳定性、地址转换、访问保护、数据位置’四个方面解释经典 RDMA Memory Registration 实际做了什么。
+  rubric:
+    criteria:
+    - id: mr_q2_stability
+      description: 解释页面在访问有效期内保持可用/稳定
+      weight: 0.25
+      required_for_mastery: true
+    - id: mr_q2_translation
+      description: 解释为 HCA 建立可用的地址转换或映射信息
+      weight: 0.25
+      required_for_mastery: true
+    - id: mr_q2_protection
+      description: 解释权限与 key/保护关联
+      weight: 0.25
+      required_for_mastery: true
+    - id: mr_q2_location
+      description: 明确数据仍在主机内存且不是复制到 HCA
+      weight: 0.25
+      required_for_mastery: true
+    critical_misconception_ids:
+    - mr_copies_memory_to_hca
+    - mr_registers_hca_memory
+    - hca_can_access_any_user_pointer
+    - mr_is_only_page_pinning
+  hints: []
+  mock_fixtures: []
+- id: mr_q3_transfer
+  node_id: memory_registration
+  title: Buffer A 的 key 能否访问 Buffer B
+  question_type: free_text
+  evidence_type: scenario_transfer
+  prompt: 程序注册了 buffer A，却把 buffer B 的地址放进一次发送/访问描述，同时使用 A 对应的 lkey。为什么不能简单认为 HCA 会照常读取 B？
+  rubric:
+    criteria:
+    - id: mr_q3_scope
+      description: 说明注册和 key 与特定内存范围关联
+      weight: 0.4
+      required_for_mastery: true
+    - id: mr_q3_validation
+      description: 说明 HCA/设备会执行映射、权限或范围校验
+      weight: 0.35
+      required_for_mastery: true
+    - id: mr_q3_not_address
+      description: 说明 key 不是任意访问能力，也不是 buffer 地址本身
+      weight: 0.25
+      required_for_mastery: true
+    critical_misconception_ids:
+    - one_key_allows_any_memory_access
+    - lkey_rkey_are_memory_addresses
+    - rdma_can_access_any_remote_memory
+  hints: []
+  mock_fixtures: []
+- id: key_q1_purpose
+  node_id: lkey_rkey_concept
+  title: lkey/rkey 的概念作用
+  question_type: free_text
+  evidence_type: free_explanation
+  prompt: lkey 和 rkey 从概念上分别解决什么访问校验问题？为什么不能把它们直接当作内存地址？
+  rubric:
+    criteria:
+    - id: key_q1_local
+      description: 说明 lkey 用于本地 SGE/本地设备访问校验的概念角色
+      weight: 0.35
+      required_for_mastery: true
+    - id: key_q1_remote
+      description: 说明 rkey 用于远端 one-sided 访问授权/校验的概念角色
+      weight: 0.35
+      required_for_mastery: true
+    - id: key_q1_not_address
+      description: 明确 key 与注册范围/权限关联而不是地址
+      weight: 0.3
+      required_for_mastery: true
+    critical_misconception_ids:
+    - lkey_rkey_are_memory_addresses
+    - one_key_allows_any_memory_access
+  hints: []
+  mock_fixtures: []
+- id: key_q2_wrong_buffer
+  node_id: lkey_rkey_concept
+  title: 错误 key 与范围场景
+  question_type: free_text
+  evidence_type: scenario_transfer
+  prompt: 远端提供了一个地址和 rkey。调用方把地址改到注册范围之外，但仍使用原 rkey。系统为什么不应把这视作合法的任意内存访问？
+  rubric:
+    criteria:
+    - id: key_q2_range
+      description: 说明地址必须落在授权/注册范围
+      weight: 0.4
+      required_for_mastery: true
+    - id: key_q2_permission
+      description: 说明 rkey 与权限/保护域信息关联
+      weight: 0.35
+      required_for_mastery: true
+    - id: key_q2_reject
+      description: 说明不匹配应失败或产生保护错误，而非任意访问
+      weight: 0.25
+      required_for_mastery: true
+    critical_misconception_ids:
+    - one_key_allows_any_memory_access
+    - rdma_can_access_any_remote_memory
+  hints: []
+  mock_fixtures: []

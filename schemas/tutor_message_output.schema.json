@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://infratutor.local/schemas/tutor_message_output.schema.json",
+  "title": "InfraTutor Tutor Message Output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "student_message",
+    "interaction_type",
+    "expected_response_type",
+    "question_id",
+    "quick_replies"
+  ],
+  "properties": {
+    "student_message": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "interaction_type": {
+      "type": "string",
+      "enum": [
+        "orientation",
+        "explanation",
+        "guided_question",
+        "formal_assessment",
+        "hint",
+        "feedback",
+        "remediation",
+        "review",
+        "transition",
+        "side_answer",
+        "recoverable_error"
+      ]
+    },
+    "expected_response_type": {
+      "type": "string",
+      "enum": ["none", "free_text", "single_choice", "multiple_choice"]
+    },
+    "question_id": {
+      "type": ["string", "null"]
+    },
+    "quick_replies": {
+      "type": "array",
+      "maxItems": 6,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 120
+      }
+    }
+  }
+}

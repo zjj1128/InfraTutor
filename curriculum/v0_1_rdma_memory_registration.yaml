@@ -1,0 +1,556 @@
+schema_version: 0.1.0
+module_id: v0_1_rdma_memory_registration
+title: RDMA Memory Registration 自适应教学切片
+stage_id: stage_3_ib_rdma_theory
+goal: 通过内存、DMA、HCA 与 RDMA 数据路径的前置链路，使学习者建立正确的 Memory Registration 心智模型。
+implementation_status: pilot
+entry_policy:
+  normal_start_node_id: virtual_vs_physical_memory
+  allow_target_diagnostic_probe: true
+  probe_does_not_bypass_prerequisites: true
+  target_probe_questions:
+    memory_registration: mr_q1_copy_check
+  description: 用户可选择尚未解锁的目标并接受一次诊断探针；探针只用于发现缺口，不能直接绕过前置或解锁后继。
+supporting_assumptions:
+- node_id: c_memory_model
+  policy: seed_mastered_for_v0_1
+  reason: 目标用户为计算机专业毕业生；V0.1 不完整教学 C 内存模型。
+- node_id: pcie_topology_basics
+  policy: seed_partial_or_mastered
+  reason: 只提供理解 DMA/HCA 位置所需的最小定向说明。
+- node_id: network_stack_basics
+  policy: seed_mastered_for_v0_1
+  reason: 只要求知道传统 Socket/内核/网卡的大致路径。
+- node_id: ib_fabric_components
+  policy: seed_partial_or_mastered
+  reason: 只要求认识 HCA、Switch、Port、Link；深层细节留在完整 Stage 3。
+content_policy:
+  facts_are_human_curated: true
+  llm_may_adapt_explanation: true
+  llm_may_create_new_nodes: false
+  advanced_topics_out_of_scope:
+  - On-Demand Paging (ODP)
+  - FRMR / Fast Registration
+  - MR cache implementation details
+  - IOMMU vendor-specific translation internals
+  - GPU/peer memory registration variants
+  - vendor private optimizations
+default_mastery_requirements:
+  minimum_mastery_score: 0.8
+  minimum_confidence_score: 0.65
+  minimum_independent_evidence: 2
+  require_unassisted_free_explanation: true
+  require_unassisted_scenario_transfer: true
+  block_on_active_critical_misconception: true
+nodes:
+- id: virtual_vs_physical_memory
+  title: Virtual Address vs Physical Page
+  type: concept
+  prerequisites:
+  - c_memory_model
+  learning_objectives:
+  - 区分程序看到的虚拟地址与机器中的物理页
+  - 解释页表/地址转换在概念上的作用
+  - 认识到同一虚拟区间可由多个物理页组成
+  canonical_facts:
+  - 普通用户程序中的指针通常是进程虚拟地址
+  - CPU/OS 通过地址转换把虚拟地址映射到物理页
+  - 虚拟连续不保证物理连续
+  - 设备访问内存时需要可用的设备侧地址转换或映射信息
+  content_boundaries:
+  - 不深入多级页表位级结构
+  - 不展开 TLB 一致性和 IOMMU 实现细节
+  common_misconceptions:
+  - virtual_address_is_physical_address
+  - virtual_contiguous_means_physical_contiguous
+  assessment_ids:
+  - vm_q1_pointer_kind
+  - vm_q2_translation_scenario
+  teaching_moves:
+  - 用 malloc buffer 与物理页示意图建立心智模型
+  - 让学习者解释虚拟连续和物理连续为何不同
+  recommended_next:
+  - device_dma
+  mastery_requirements:
+    minimum_mastery_score: 0.8
+    minimum_confidence_score: 0.65
+    minimum_independent_evidence: 2
+    require_unassisted_free_explanation: true
+    require_unassisted_scenario_transfer: true
+    block_on_active_critical_misconception: true
+  implementation_status: pilot
+- id: device_dma
+  title: Device DMA
+  type: concept
+  prerequisites:
+  - virtual_vs_physical_memory
+  - pcie_topology_basics
+  learning_objectives:
+  - 区分 CPU 配置传输与设备执行数据搬运
+  - 解释 DMA 为什么减少 CPU 逐字节参与
+  - 知道 DMA 完成仍需通知、轮询或同步
+  canonical_facts:
+  - DMA 让设备或 DMA 引擎直接在设备与内存之间搬运数据
+  - CPU 通常负责准备描述信息、启动/提交工作并处理完成
+  - DMA 不等于所有场景都零拷贝，也不等于不需要同步
+  content_boundaries:
+  - 不深入具体 DMA descriptor 格式
+  - 不深入 cache coherence 的平台差异
+  common_misconceptions:
+  - dma_is_cpu_memcpy
+  - dma_always_means_zero_copy
+  - dma_needs_no_completion
+  assessment_ids:
+  - dma_q1_actor
+  - dma_q2_scenario
+  teaching_moves:
+  - 画出 CPU、RAM、PCIe Device 三者的数据/控制流
+  - 用 CPU 是否执行字节复制循环进行反问
+  - 通过完成事件场景区分提交与完成
+  recommended_next:
+  - pinned_memory
+  - rdma_data_path
+  mastery_requirements:
+    minimum_mastery_score: 0.8
+    minimum_confidence_score: 0.65
+    minimum_independent_evidence: 2
+    require_unassisted_free_explanation: true
+    require_unassisted_scenario_transfer: true
+    block_on_active_critical_misconception: true
+  implementation_status: pilot
+- id: pinned_memory
+  title: Pinned Memory
+  type: concept
+  prerequisites:
+  - virtual_vs_physical_memory
+  - device_dma
+  learning_objectives:
+  - 解释为什么设备访问期间相关内存页需要保持稳定
+  - 区分 pin/lock 与数据复制
+  - 认识页固定带来的系统资源成本
+  canonical_facts:
+  - 经典直接设备访问需要在有效期内保持相关页可访问和映射稳定
+  - Pinned Memory 的核心是限制页面被换出/迁移等行为，不是把数据复制到设备
+  - 固定过多内存会占用不可轻易回收的系统资源
+  content_boundaries:
+  - V0.1 使用经典 pinned registration 心智模型
+  - 高级按需分页例外只作为边界提示
+  common_misconceptions:
+  - pinning_copies_buffer_to_device
+  - pinning_makes_memory_physically_contiguous
+  - pinning_has_no_resource_cost
+  assessment_ids:
+  - pin_q1_page_stability
+  - pin_q2_copy_check
+  teaching_moves:
+  - 用设备正在访问时 OS 移动/换出页面的场景
+  - 让学习者区分稳定、连续和复制三个概念
+  recommended_next:
+  - memory_registration
+  mastery_requirements:
+    minimum_mastery_score: 0.8
+    minimum_confidence_score: 0.65
+    minimum_independent_evidence: 2
+    require_unassisted_free_explanation: true
+    require_unassisted_scenario_transfer: true
+    block_on_active_critical_misconception: true
+  implementation_status: pilot
+- id: hca_role
+  title: HCA Role
+  type: concept
+  prerequisites:
+  - ib_fabric_components
+  - pcie_topology_basics
+  learning_objectives:
+  - 描述 HCA 在主机、PCIe 与 IB Fabric 之间的位置
+  - 区分 HCA 的网络处理、DMA 与访问保护职责
+  - 理解 HCA 不是用来存放整个注册 buffer 的普通内存仓库
+  canonical_facts:
+  - HCA 是主机连接 InfiniBand/RDMA Fabric 的适配器
+  - HCA 可以执行协议、队列处理和对主机内存的 DMA 访问
+  - 注册 buffer 的数据通常仍位于主机内存
+  content_boundaries:
+  - 不深入 HCA 芯片微架构
+  - 不展开厂商片上缓存和固件实现
+  common_misconceptions:
+  - hca_is_only_a_network_cable
+  - hca_stores_registered_buffer
+  assessment_ids:
+  - hca_q1_role_path
+  - hca_q2_buffer_location
+  teaching_moves:
+  - 让学习者在 CPU、RAM、HCA、Switch 中定位 HCA
+  - 对比网络协议处理与数据存储
+  recommended_next:
+  - rdma_data_path
+  - memory_registration
+  mastery_requirements:
+    minimum_mastery_score: 0.8
+    minimum_confidence_score: 0.65
+    minimum_independent_evidence: 2
+    require_unassisted_free_explanation: true
+    require_unassisted_scenario_transfer: true
+    block_on_active_critical_misconception: true
+  implementation_status: pilot
+- id: why_rdma
+  title: Why RDMA
+  type: concept
+  prerequisites:
+  - network_stack_basics
+  learning_objectives:
+  - 从 CPU 参与、数据拷贝、内核路径和延迟解释 RDMA 动机
+  - 避免把 RDMA 简化为单纯更快的网卡
+  canonical_facts:
+  - RDMA 的价值来自更直接的数据路径、低 CPU 开销和远程内存语义等组合
+  - 是否真正零拷贝取决于具体路径和缓冲区管理
+  - RDMA 仍需要队列、内存保护、完成处理和网络可靠性机制
+  content_boundaries:
+  - 不做 TCP 与 RDMA 的完整性能比较
+  - 不宣称 RDMA 在所有负载下都更优
+  common_misconceptions:
+  - rdma_is_only_faster_nic
+  - rdma_means_no_cpu_work_at_all
+  assessment_ids:
+  - why_rdma_q1_compare_path
+  - why_rdma_q2_tradeoff
+  teaching_moves:
+  - 对比传统 Socket 路径与 RDMA 路径
+  - 要求学习者列出收益与新增复杂度
+  recommended_next:
+  - rdma_data_path
+  mastery_requirements:
+    minimum_mastery_score: 0.8
+    minimum_confidence_score: 0.65
+    minimum_independent_evidence: 2
+    require_unassisted_free_explanation: true
+    require_unassisted_scenario_transfer: true
+    block_on_active_critical_misconception: true
+  implementation_status: pilot
+- id: rdma_data_path
+  title: RDMA Data Path
+  type: concept
+  prerequisites:
+  - why_rdma
+  - hca_role
+  - device_dma
+  learning_objectives:
+  - 按顺序描述本地应用、内存、HCA、Fabric、远端 HCA 与远端内存
+  - 区分控制路径与数据路径
+  - 知道访问仍受注册、key 和队列对象约束
+  canonical_facts:
+  - 应用提交通信工作后，HCA 可通过 DMA 读取/写入已允许的主机内存
+  - 数据经过 Fabric 到达远端 HCA，再访问远端已授权内存或队列
+  - CPU 通常参与资源创建、工作提交和完成处理，但不逐字节搬运有效负载
+  content_boundaries:
+  - 不展开具体包头和交换机路由细节
+  - 不深入 one-sided 与 two-sided 的 API 差异
+  common_misconceptions:
+  - rdma_bypasses_all_software
+  - remote_cpu_always_copies_payload
+  - rdma_can_access_any_remote_memory
+  assessment_ids:
+  - path_q1_order
+  - path_q2_remote_scenario
+  teaching_moves:
+  - 让学习者排列数据路径组件
+  - 分别标出 CPU 控制流和 payload 数据流
+  recommended_next:
+  - memory_registration
+  mastery_requirements:
+    minimum_mastery_score: 0.8
+    minimum_confidence_score: 0.65
+    minimum_independent_evidence: 2
+    require_unassisted_free_explanation: true
+    require_unassisted_scenario_transfer: true
+    block_on_active_critical_misconception: true
+  implementation_status: pilot
+- id: memory_registration
+  title: RDMA Memory Registration
+  type: concept
+  prerequisites:
+  - pinned_memory
+  - hca_role
+  - rdma_data_path
+  learning_objectives:
+  - 解释为什么 HCA 访问用户 buffer 前需要 Memory Registration
+  - 说明经典 MR 涉及内存可用性/稳定性、地址转换和访问保护元数据
+  - 明确 MR 不会自动把 buffer 数据复制到 HCA
+  - 把 MR 与后续 lkey/rkey 的访问校验联系起来
+  canonical_facts:
+  - 注册对象描述并授权一段主机内存供本地或远端 RDMA 操作使用
+  - 经典注册路径通常确保相关页在注册有效期内可被设备稳定访问，并建立设备所需的地址转换/映射信息
+  - MR 还承载访问权限和 key 关联，用于限制设备操作
+  - buffer 的有效负载仍在原主机内存中；注册不是把数据整体复制到 HCA
+  - 高级 ODP 等机制可能改变页面固定的时机，但不改变访问必须受映射与保护管理的核心模型
+  content_boundaries:
+  - 不深入 ODP、FRMR、MR cache
+  - 不要求记忆 ibv_reg_mr 参数细节
+  - lkey/rkey 只讲概念，具体 API 放到 Stage 4
+  common_misconceptions:
+  - mr_copies_memory_to_hca
+  - mr_registers_hca_memory
+  - hca_can_access_any_user_pointer
+  - mr_is_only_page_pinning
+  assessment_ids:
+  - mr_q1_copy_check
+  - mr_q2_explain
+  - mr_q3_transfer
+  teaching_moves:
+  - 从错误模型‘复制到 HCA’开始反问数据实际在哪里
+  - 把 pin、translation、protection 分成三层
+  - 用 buffer A 的 lkey 访问 buffer B 的场景检查迁移
+  recommended_next:
+  - lkey_rkey_concept
+  mastery_requirements:
+    minimum_mastery_score: 0.8
+    minimum_confidence_score: 0.65
+    minimum_independent_evidence: 2
+    require_unassisted_free_explanation: true
+    require_unassisted_scenario_transfer: true
+    block_on_active_critical_misconception: true
+  implementation_status: pilot
+- id: lkey_rkey_concept
+  title: lkey / rkey Concept
+  type: concept
+  prerequisites:
+  - memory_registration
+  learning_objectives:
+  - 理解 lkey/rkey 是访问校验与授权信息的一部分，不是内存地址
+  - 区分本地 SGE 使用 lkey 与远端 one-sided 操作使用 rkey 的概念角色
+  canonical_facts:
+  - key 与特定注册内存区域及权限关联
+  - 使用错误或越界的 key/地址组合不能被当作任意内存访问
+  - 具体 API 与权限标志在 RDMA Verbs 阶段展开
+  content_boundaries:
+  - 不展开 key 编码与硬件表结构
+  - 不实现真实 verbs API
+  common_misconceptions:
+  - lkey_rkey_are_memory_addresses
+  - one_key_allows_any_memory_access
+  assessment_ids:
+  - key_q1_purpose
+  - key_q2_wrong_buffer
+  teaching_moves:
+  - 使用门禁凭证类比后立即回到 buffer 范围与权限
+  - 通过 A 的 key 与 B 的地址不匹配场景评估
+  recommended_next: []
+  mastery_requirements:
+    minimum_mastery_score: 0.8
+    minimum_confidence_score: 0.65
+    minimum_independent_evidence: 2
+    require_unassisted_free_explanation: true
+    require_unassisted_scenario_transfer: true
+    block_on_active_critical_misconception: true
+  implementation_status: pilot
+misconceptions:
+- id: virtual_address_is_physical_address
+  node_id: virtual_vs_physical_memory
+  description: 把普通程序指针直接当成物理地址
+  critical: true
+  remediation_nodes:
+  - virtual_vs_physical_memory
+- id: virtual_contiguous_means_physical_contiguous
+  node_id: virtual_vs_physical_memory
+  description: 认为虚拟连续必然物理连续
+  critical: false
+  remediation_nodes:
+  - virtual_vs_physical_memory
+- id: dma_is_cpu_memcpy
+  node_id: device_dma
+  description: 认为 DMA 仍由 CPU 逐字节执行 memcpy
+  critical: true
+  remediation_nodes:
+  - device_dma
+- id: dma_always_means_zero_copy
+  node_id: device_dma
+  description: 认为出现 DMA 就必然端到端零拷贝
+  critical: false
+  remediation_nodes:
+  - device_dma
+  - rdma_data_path
+- id: dma_needs_no_completion
+  node_id: device_dma
+  description: 认为提交 DMA 后不需要完成通知或同步
+  critical: false
+  remediation_nodes:
+  - device_dma
+- id: pinning_copies_buffer_to_device
+  node_id: pinned_memory
+  description: 认为 pin 操作会把 buffer 复制到设备
+  critical: true
+  remediation_nodes:
+  - pinned_memory
+  - device_dma
+- id: pinning_makes_memory_physically_contiguous
+  node_id: pinned_memory
+  description: 认为页固定会自动让全部物理页连续
+  critical: false
+  remediation_nodes:
+  - pinned_memory
+  - virtual_vs_physical_memory
+- id: pinning_has_no_resource_cost
+  node_id: pinned_memory
+  description: 认为固定内存对系统没有资源成本
+  critical: false
+  remediation_nodes:
+  - pinned_memory
+- id: hca_is_only_a_network_cable
+  node_id: hca_role
+  description: 把 HCA 当成不处理队列、协议或 DMA 的被动网线
+  critical: false
+  remediation_nodes:
+  - hca_role
+- id: hca_stores_registered_buffer
+  node_id: hca_role
+  description: 认为 HCA 保存了注册 buffer 的完整有效负载
+  critical: true
+  remediation_nodes:
+  - hca_role
+  - memory_registration
+- id: rdma_is_only_faster_nic
+  node_id: why_rdma
+  description: 把 RDMA 价值简化为网卡速率更高
+  critical: false
+  remediation_nodes:
+  - why_rdma
+- id: rdma_means_no_cpu_work_at_all
+  node_id: why_rdma
+  description: 认为 RDMA 完全不需要 CPU 创建资源、提交和处理完成
+  critical: false
+  remediation_nodes:
+  - why_rdma
+  - rdma_data_path
+- id: rdma_bypasses_all_software
+  node_id: rdma_data_path
+  description: 认为 RDMA 绕过所有软件与控制逻辑
+  critical: false
+  remediation_nodes:
+  - rdma_data_path
+- id: remote_cpu_always_copies_payload
+  node_id: rdma_data_path
+  description: 认为远端 CPU 必须逐字节复制 RDMA payload
+  critical: false
+  remediation_nodes:
+  - rdma_data_path
+- id: rdma_can_access_any_remote_memory
+  node_id: rdma_data_path
+  description: 认为 RDMA 可以任意访问远端进程内存
+  critical: true
+  remediation_nodes:
+  - memory_registration
+  - lkey_rkey_concept
+- id: mr_copies_memory_to_hca
+  node_id: memory_registration
+  description: 认为 Memory Registration 会把用户 buffer 复制到 HCA
+  critical: true
+  remediation_nodes:
+  - device_dma
+  - pinned_memory
+  - memory_registration
+- id: mr_registers_hca_memory
+  node_id: memory_registration
+  description: 认为 MR 注册的是 HCA 内部内存而不是主机内存区域
+  critical: true
+  remediation_nodes:
+  - hca_role
+  - memory_registration
+- id: hca_can_access_any_user_pointer
+  node_id: memory_registration
+  description: 认为 HCA 可以直接使用任意普通用户指针，无需受控映射和授权
+  critical: true
+  remediation_nodes:
+  - virtual_vs_physical_memory
+  - memory_registration
+- id: mr_is_only_page_pinning
+  node_id: memory_registration
+  description: 认为 MR 只有 pin，没有地址转换、保护和 key 关联
+  critical: false
+  remediation_nodes:
+  - memory_registration
+  - lkey_rkey_concept
+- id: lkey_rkey_are_memory_addresses
+  node_id: lkey_rkey_concept
+  description: 把 lkey/rkey 当作 buffer 地址
+  critical: true
+  remediation_nodes:
+  - lkey_rkey_concept
+- id: one_key_allows_any_memory_access
+  node_id: lkey_rkey_concept
+  description: 认为一个 key 可以访问任意内存范围
+  critical: true
+  remediation_nodes:
+  - lkey_rkey_concept
+  - memory_registration
+seeds:
+  clean:
+    description: 从 pilot 起点正常学习。supporting assumptions 按 V0.1 策略预置。
+    node_states:
+      virtual_vs_physical_memory:
+        status: ready
+        mastery_score: 0.0
+        confidence_score: 0.0
+      device_dma:
+        status: locked
+        mastery_score: 0.0
+        confidence_score: 0.0
+      pinned_memory:
+        status: locked
+        mastery_score: 0.0
+        confidence_score: 0.0
+      hca_role:
+        status: ready
+        mastery_score: 0.0
+        confidence_score: 0.0
+      why_rdma:
+        status: ready
+        mastery_score: 0.0
+        confidence_score: 0.0
+      rdma_data_path:
+        status: locked
+        mastery_score: 0.0
+        confidence_score: 0.0
+      memory_registration:
+        status: locked
+        mastery_score: 0.0
+        confidence_score: 0.0
+      lkey_rkey_concept:
+        status: locked
+        mastery_score: 0.0
+        confidence_score: 0.0
+  golden_path:
+    description: 快速演示 MR 误解诊断、DMA/Pinned 补课、返回与解锁。
+    target_node_id: memory_registration
+    initial_question_id: mr_q1_copy_check
+    node_states:
+      virtual_vs_physical_memory:
+        status: mastered
+        mastery_score: 0.9
+        confidence_score: 0.8
+      device_dma:
+        status: partial
+        mastery_score: 0.58
+        confidence_score: 0.48
+      pinned_memory:
+        status: partial
+        mastery_score: 0.56
+        confidence_score: 0.44
+      hca_role:
+        status: mastered
+        mastery_score: 0.86
+        confidence_score: 0.74
+      why_rdma:
+        status: mastered
+        mastery_score: 0.84
+        confidence_score: 0.7
+      rdma_data_path:
+        status: partial
+        mastery_score: 0.64
+        confidence_score: 0.52
+      memory_registration:
+        status: learning
+        mastery_score: 0.3
+        confidence_score: 0.25
+      lkey_rkey_concept:
+        status: locked
+        mastery_score: 0.0
+        confidence_score: 0.0

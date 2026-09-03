@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://infratutor.local/schemas/assessment_output.schema.json",
+  "title": "InfraTutor Assessment Output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "question_id",
+    "node_id",
+    "understanding",
+    "score",
+    "rubric_results",
+    "misconception_ids",
+    "missing_concept_ids",
+    "answer_is_ambiguous",
+    "feedback_points",
+    "recommended_action",
+    "recommended_target_node_id"
+  ],
+  "properties": {
+    "question_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "node_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "understanding": {
+      "type": "string",
+      "enum": ["incorrect", "partial", "correct", "uncertain"]
+    },
+    "score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "rubric_results": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["criterion_id", "result", "evidence_span"],
+        "properties": {
+          "criterion_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "result": {
+            "type": "string",
+            "enum": ["met", "not_met", "uncertain"]
+          },
+          "evidence_span": {
+            "type": "string",
+            "maxLength": 400
+          }
+        }
+      }
+    },
+    "misconception_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "missing_concept_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "answer_is_ambiguous": {
+      "type": "boolean"
+    },
+    "feedback_points": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 300
+      }
+    },
+    "recommended_action": {
+      "type": "string",
+      "enum": [
+        "ask_followup",
+        "hint",
+        "retry",
+        "remediate",
+        "assess_transfer",
+        "advance_candidate"
+      ]
+    },
+    "recommended_target_node_id": {
+      "type": ["string", "null"]
+    }
+  }
+}

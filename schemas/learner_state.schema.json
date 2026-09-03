@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://infratutor.local/schemas/learner_state.schema.json",
+  "title": "InfraTutor Learner State",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["learner_id", "profile", "node_states", "misconceptions"],
+  "properties": {
+    "learner_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["display_name", "target_role", "teaching_preferences"],
+      "properties": {
+        "display_name": {"type": "string"},
+        "target_role": {"type": "string"},
+        "teaching_preferences": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "node_states": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "mastery_score",
+          "confidence_score",
+          "evidence_weight",
+          "attempts",
+          "evidence_ids",
+          "last_seen_at",
+          "last_tested_at",
+          "review_due_at"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "locked",
+              "ready",
+              "learning",
+              "partial",
+              "mastered",
+              "review_needed"
+            ]
+          },
+          "mastery_score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "confidence_score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "evidence_weight": {
+            "type": "number",
+            "minimum": 0
+          },
+          "attempts": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "evidence_ids": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "last_seen_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "last_tested_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "review_due_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "misconceptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "misconception_id",
+          "node_id",
+          "status",
+          "evidence_ids",
+          "first_seen_at",
+          "last_seen_at",
+          "resolved_at"
+        ],
+        "properties": {
+          "misconception_id": {"type": "string"},
+          "node_id": {"type": "string"},
+          "status": {
+            "type": "string",
+            "enum": ["suspected", "active", "resolved"]
+          },
+          "evidence_ids": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "first_seen_at": {"type": "string", "format": "date-time"},
+          "last_seen_at": {"type": "string", "format": "date-time"},
+          "resolved_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  }
+}
