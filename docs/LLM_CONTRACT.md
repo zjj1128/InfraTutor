@@ -309,3 +309,7 @@ LLM_REPAIR_RETRIES=1
 OpenAI Adapter 使用 `AsyncOpenAI.responses.parse()`、Pydantic `text_format` 和
 `response.output_parsed`。只有 Adapter 能看到厂商对象；上层只接触 `LLMGateway` Protocol 和项目
 合同。Live 缺少 Key/模型时应用仍启动，调用返回 `LLM_NOT_CONFIGURED`；不会自动改用 Mock。
+
+Phase 5 的 `TutorSessionService` 为这条链路增加幂等与事务编排。它不会在等待 Assessor/Teacher 时
+持有 SQLite 事务；Assessor 错误不会调用 Engine，Teacher 错误不会重放 Assessor 或 Engine。前端
+只接收 canonical assessment 摘要、Decision 和脱敏 metadata，不接收未经校验的 provider 原始输出。

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request
 
 from backend.app.curriculum.service import CurriculumService, RoadmapView
 from backend.app.learner.service import LearnerStateService
+from backend.app.sessions.service import TutorSessionService
 
 router = APIRouter(prefix="/roadmap", tags=["roadmap"])
 
@@ -10,4 +11,8 @@ router = APIRouter(prefix="/roadmap", tags=["roadmap"])
 def get_roadmap(request: Request) -> RoadmapView:
     service: CurriculumService = request.app.state.curriculum_service
     learner_service: LearnerStateService = request.app.state.learner_state_service
-    return service.roadmap_view(learner_service.roadmap_state_map())
+    session_service: TutorSessionService = request.app.state.tutor_session_service
+    return service.roadmap_view(
+        learner_service.roadmap_state_map(),
+        active_session=session_service.active_summary(),
+    )

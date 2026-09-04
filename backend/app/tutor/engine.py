@@ -23,6 +23,7 @@ from backend.app.tutor.domain import (
     CandidateAction,
     Decision,
     DecisionTrace,
+    EntryMode,
     EventType,
     LearningSessionView,
     NodeStateChange,
@@ -68,7 +69,11 @@ class TutorEngine:
         self.policy = TutorPolicy()
 
     def start_session(
-        self, target_node_id: str, mode: SessionMode = SessionMode.LEARN
+        self,
+        target_node_id: str,
+        mode: SessionMode = SessionMode.LEARN,
+        *,
+        entry_mode: EntryMode = EntryMode.NORMAL,
     ) -> TutorTurnResult:
         if target_node_id not in self.pilot_nodes:
             raise TutorEngineError(f"目标不是可教学的 pilot node: {target_node_id}")
@@ -81,6 +86,8 @@ class TutorEngine:
                 id=f"session_{uuid4().hex}",
                 learner_id=DEFAULT_LEARNER_ID,
                 mode=mode.value,
+                entry_mode=entry_mode.value,
+                version=1,
                 target_node_id=target_node_id,
                 current_node_id=target_node_id,
                 expected_question_id=None,
@@ -90,6 +97,7 @@ class TutorEngine:
                 current_assistance_level="none",
                 used_target_diagnostic_probes_json=[],
                 current_question_is_diagnostic_probe=False,
+                recoverable_error_json=None,
                 created_at=now,
                 updated_at=now,
             )
@@ -108,7 +116,22 @@ class TutorEngine:
             diagnostic_consumed = False
 
             probe_id = self._available_probe(record, target_state)
-            if target_state.status == "locked" and probe_id is not None:
+            if entry_mode == EntryMode.REVIEW:
+                action = Action.REVIEW
+                action_target = target_node_id
+                reasons = [ReasonCode.NODE_AVAILABLE]
+                record.expected_question_id = self._planned_question(
+                    db, record, target_node_id, target_state
+                )
+                candidates.append(
+                    CandidateAction(
+                        action=action,
+                        target_node_id=action_target,
+                        reason_codes=reasons,
+                        rank=[7],
+                    )
+                )
+            elif target_state.status == "locked" and probe_id is not None:
                 record.expected_question_id = probe_id
                 record.current_question_is_diagnostic_probe = True
                 record.used_target_diagnostic_probes_json = [target_node_id]
@@ -185,11 +208,22 @@ class TutorEngine:
             db.flush()
             return TutorTurnResult(session=self._session_view(record), decision=decision)
 
-    def handle_event(self, session_id: str, event: TutorEvent) -> TutorTurnResult:
+    def handle_event(
+        self,
+        session_id: str,
+        event: TutorEvent,
+        *,
+        expected_version: int | None = None,
+    ) -> TutorTurnResult:
         with self.session_factory.begin() as db:
             record = self._require_session(db, session_id)
             if record.status != SessionStatus.ACTIVE.value:
                 raise TutorEngineError(f"Session 已结束: {session_id}")
+            if expected_version is not None and record.version != expected_version:
+                raise TutorEngineError(
+                    "SESSION_VERSION_CONFLICT: "
+                    f"expected {expected_version}, current {record.version}"
+                )
 
             before_session = self._session_view(record).model_dump(mode="json")
             session_input = {
@@ -433,6 +467,8 @@ class TutorEngine:
         if not outcome_already_applied:
             record.last_action = outcome.action.value
             record.updated_at = utc_now()
+        record.version += 1
+        record.recoverable_error_json = None
         state_delta.session_changes = self._session_changes(before_session, record)
         decision = self._decision(
             action=outcome.action,
@@ -485,8 +521,15 @@ class TutorEngine:
                 record.expected_question_id = next_question
             record.current_assistance_level = "none"
         elif outcome.action == Action.ADVANCE:
-            record.current_node_id = outcome.target_node_id
-            record.expected_question_id = completion_question
+            if previous_node_id == record.target_node_id:
+                # A target session ends at target mastery. The recommended next node is
+                # returned by the Decision, but starting it remains an explicit user action.
+                record.current_node_id = previous_node_id
+                record.expected_question_id = None
+                record.status = SessionStatus.COMPLETED.value
+            else:
+                record.current_node_id = outcome.target_node_id
+                record.expected_question_id = completion_question
             record.current_assistance_level = "none"
             if outcome.target_node_id == previous_node_id and completion_question is None:
                 record.status = SessionStatus.COMPLETED.value
@@ -803,6 +846,7 @@ class TutorEngine:
             Action.HINT,
             Action.RETRY,
             Action.REMEDIATE,
+            Action.REVIEW,
         }
         return TeacherDirective(
             learning_goal=node.learning_objectives[0],
@@ -872,6 +916,8 @@ class TutorEngine:
             session_id=record.id,
             learner_id=record.learner_id,
             mode=SessionMode(record.mode),
+            entry_mode=EntryMode(record.entry_mode),
+            version=record.version,
             target_node_id=record.target_node_id,
             current_node_id=record.current_node_id,
             expected_question_id=record.expected_question_id,
@@ -890,6 +936,7 @@ class TutorEngine:
         after = TutorEngine._session_view(record).model_dump(mode="json")
         tracked = (
             "current_node_id",
+            "version",
             "expected_question_id",
             "return_stack",
             "status",

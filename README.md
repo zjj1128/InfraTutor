@@ -1,8 +1,6 @@
 # InfraTutor V0.1
 
-InfraTutor 是面向高速互联新人的自适应学习 Web App。当前仓库已完成 `IMPLEMENTATION_PLAN.md` 的 Phase 0 至 Phase 4：课程图、Learner State、确定性 Tutor Engine，以及可替换的 LLM Gateway/Structured Output 后端链路已经就绪。
-
-当前版本仍不包含 Tutor Session Web UI。Phase 4 的 Mock/Live LLM 能力通过后端服务和开发命令验收，不提前制作聊天页面。
+InfraTutor 是面向高速互联新人的自适应学习 Web App。当前仓库已完成 `IMPLEMENTATION_PLAN.md` 的 Phase 0 至 Phase 5：课程图、Learner State、确定性 Tutor Engine、LLM Gateway，以及可在浏览器手动完成 Golden Path 的 Tutor Session 已经就绪。
 
 ## 当前能力
 
@@ -27,6 +25,10 @@ InfraTutor 是面向高速互联新人的自适应学习 Web App。当前仓库�
 - prerequisite 环、重复 ID、未知引用、assessment / misconception 关联校验。
 - Course Graph 的节点、前置闭包、解锁和推荐后继查询。
 - 开发态 Roadmap 提供带确认的 Clean / Golden Path reset。
+- 单用户 active Session 的创建、恢复、结束、递增版本和 `client_turn_id` 幂等提交。
+- 持久化 Tutor Turn、消息 transcript、QuestionView 和刷新恢复。
+- `/learn/:sessionId` Tutor 页面、自由文本/单选 renderer、补课路线提示和可折叠 Debug Panel。
+- Roadmap 的开始、继续、诊断、复习和锁定按钮由后端状态驱动。
 
 ## 环境要求
 
@@ -69,9 +71,18 @@ make backend
 make frontend
 ```
 
-开发环境中 Vite 会将 `/api` 代理到本地 FastAPI。
+`make dev` 会打印实际 Frontend URL、Backend URL、LLM mode 和当前数据库 seed。若配置端口已被占用，命令会指出具体端口并退出，不会静默切换或终止未知进程。
 
-开发服务器监听 `0.0.0.0`。在 WSL2 中启动后，Windows 浏览器通常可直接访问上述 `127.0.0.1` 地址；若系统禁用了 localhost 转发，可改用 `hostname -I` 显示的 WSL 地址访问 5173 端口。
+开发环境中前端始终请求相对路径 `/api`，Vite 会将它代理到配置的 FastAPI。端口可在根目录 `.env` 中调整：
+
+```text
+BACKEND_HOST=0.0.0.0
+BACKEND_PORT=8000
+FRONTEND_HOST=0.0.0.0
+FRONTEND_PORT=5173
+```
+
+开发服务器监听 `0.0.0.0`。在 WSL2 中启动后，Windows 浏览器通常可直接访问 `make dev` 打印的 `127.0.0.1` 地址：Windows 的 localhost forwarding 会转发到 WSL。若无法访问，先确认命令没有报告端口占用，再检查 `%UserProfile%\.wslconfig` 是否禁用了 `localhostForwarding`；也可用 `hostname -I` 显示的 WSL 地址加当前 `FRONTEND_PORT` 访问。
 
 ## 校验与测试
 
@@ -79,6 +90,7 @@ make frontend
 make validate-curriculum
 make demo-tutor-engine
 make demo-llm-mock
+make demo-tutor-session
 make test
 make lint
 make build
@@ -123,8 +135,9 @@ backend/
     curriculum/      # Pydantic 模型、加载、校验、图查询
     db/              # SQLAlchemy / SQLite 初始化
     learner/         # 实体、repository、Seed、状态规则与 API DTO
-    tutor/           # Session、Trace、Policy、Planner、selector 与 fixtures
+    tutor/           # Engine Session、Trace、Policy、Planner、selector 与 fixtures
     llm/             # contracts、Gateway、Provider、校验、应用服务与 metadata
+    sessions/        # Tutor Session API 编排、Turn/Message 持久化与前端 DTO
   tests/
 frontend/
   src/
@@ -154,6 +167,16 @@ schemas/             # 由 Pydantic 生成的 LLM schema 与 learner schema
 
 只返回 mode、provider、模型/Key 是否已配置、`live_ready` 和可选的最后错误码；不会返回 Key 或 base URL。
 
+### Tutor Session API
+
+- `POST /api/tutor/sessions`：按 `normal / diagnostic / review` 创建或恢复会话。
+- `GET /api/tutor/sessions/active`：返回默认 learner 的 active Session。
+- `GET /api/tutor/sessions/{session_id}`：返回可直接渲染的 Snapshot 与 transcript。
+- `POST /api/tutor/sessions/{session_id}/turns`：提交显式 `LearnerTurnKind`。
+- `POST /api/tutor/sessions/{session_id}/abandon`：保留 Evidence 并结束会话。
+
+Turn 请求必须携带当前 `version`、`expected_question_id` 和唯一 `client_turn_id`。网络中断重试复用同一个 ID，后端直接重放第一次持久化响应，不重复调用模型或写 Evidence。
+
 ### `POST /api/demo/reset`
 
 开发态重置为 Clean Seed：
@@ -174,6 +197,8 @@ curl -X POST http://127.0.0.1:8000/api/demo/reset \
 - `DATABASE_URL`
 - `CORS_ORIGINS`
 - `ENABLE_DEBUG_PANEL`
+- `BACKEND_HOST` / `BACKEND_PORT`
+- `FRONTEND_HOST` / `FRONTEND_PORT`
 - `CURRICULUM_DIR`（可选，默认是仓库的 `curriculum/`）
 
 LLM 默认使用无需 Key 和网络的 Mock：
@@ -221,13 +246,21 @@ make smoke-llm-live
 
 缺少 Live 配置时该命令明确报告“未运行”，且不会输出 Key。
 
+## Tutor Session 演示与手动 Golden Path
+
+纯 API/应用层演示不访问网络：
+
+```bash
+make demo-tutor-session
+```
+
+浏览器中先 Reset 到 Golden Path，选择 Memory Registration 并点击“体验诊断”。按 Debug Panel 的 Mock Fixtures 填入典型误解和各节点正确解释/迁移答案，即可依次观察 Device DMA、Pinned Memory、返回 MR、MR Mastered 和 lkey/rkey Ready。Fixture 按钮只填充输入框，不会自动提交，Live 模式不显示。
+
 ## 后续 Phase
 
-- Phase 5：Tutor Session UI 与 Debug Panel。
 - Phase 6：Golden Path 浏览器 E2E。
 - Phase 7：可靠性与体验收尾。
 
 课程与教学规则以 `DECISIONS.md`、领域文档和 `IMPLEMENTATION_PLAN.md` 为准。
 
-Roadmap 中的“学习会话暂未开放”按钮仍为禁用状态。Phase 4 只实现后端模型链路；可进入的
-Tutor Session 页面属于 Phase 5，当前不会用临时聊天页替代。
+Phase 6 的 Playwright 浏览器自动化 E2E 尚未实现；Phase 5 使用后端 API 集成测试、React 组件测试和人工浏览器流程验收。

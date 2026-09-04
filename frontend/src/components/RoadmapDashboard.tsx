@@ -26,12 +26,16 @@ import type {
   RoadmapStage,
   SeedName,
 } from "../types/roadmap";
+import type { EntryMode } from "../types/session";
 
 interface RoadmapDashboardProps {
   roadmap: RoadmapData;
   onReset: (seed: SeedName) => Promise<void>;
   isResetting: boolean;
   resetError: string | null;
+  onNavigate: (path: string) => void;
+  onStartSession: (nodeId: string, mode: EntryMode) => Promise<void>;
+  onAbandonSession: (sessionId: string, version: number) => Promise<void>;
 }
 
 type NodeFilter = "pilot" | "all";
@@ -174,7 +178,36 @@ function NodeList({
   );
 }
 
-function NodeDetails({ node }: { node: RoadmapNode | null }) {
+function startMode(node: RoadmapNode): EntryMode {
+  if (node.learner_status === "mastered" || node.learner_status === "review_needed") {
+    return "review";
+  }
+  if (node.learner_status === "locked" && node.can_start_diagnostic_probe) {
+    return "diagnostic";
+  }
+  return "normal";
+}
+
+function actionLabel(node: RoadmapNode): string {
+  if (node.active_session_id) return "继续学习";
+  if (node.learner_status === "mastered" || node.learner_status === "review_needed") {
+    return "复习";
+  }
+  if (node.learner_status === "locked") {
+    return node.can_start_diagnostic_probe ? "体验诊断" : "前置知识未满足";
+  }
+  return "开始学习";
+}
+
+function NodeDetails({
+  node,
+  isStarting,
+  onStart,
+}: {
+  node: RoadmapNode | null;
+  isStarting: boolean;
+  onStart: (node: RoadmapNode, mode: EntryMode) => void;
+}) {
   if (!node) {
     return (
       <aside className="node-details empty-state">
@@ -252,11 +285,12 @@ function NodeDetails({ node }: { node: RoadmapNode | null }) {
       <button
         className="session-placeholder"
         type="button"
-        disabled
-        title="Tutor Session 将在后续阶段开放"
+        disabled={isStarting || (node.learner_status === "locked" && !node.can_start_diagnostic_probe)}
+        title={node.learner_status === "locked" && !node.can_start_diagnostic_probe ? "请先完成缺失的前置知识" : undefined}
+        onClick={() => onStart(node, startMode(node))}
       >
         <Play size={16} aria-hidden="true" />
-        学习会话暂未开放
+        {isStarting ? "正在进入" : actionLabel(node)}
       </button>
     </aside>
   );
@@ -303,6 +337,9 @@ export function RoadmapDashboard({
   onReset,
   isResetting,
   resetError,
+  onNavigate,
+  onStartSession,
+  onAbandonSession,
 }: RoadmapDashboardProps) {
   const [selectedStageId, setSelectedStageId] = useState(roadmap.current_stage_id);
   const [filter, setFilter] = useState<NodeFilter>("pilot");
@@ -313,6 +350,12 @@ export function RoadmapDashboard({
     currentStage.nodes.find((node) => node.is_selectable) ??
     null;
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(initialNode?.id ?? null);
+  const [isStarting, setIsStarting] = useState(false);
+  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [pendingSwitch, setPendingSwitch] = useState<{
+    node: RoadmapNode;
+    mode: EntryMode;
+  } | null>(null);
 
   const visibleNodes = useMemo(() => {
     if (filter === "all") {
@@ -332,6 +375,41 @@ export function RoadmapDashboard({
     setSelectedNodeId(nextStage.nodes.find((node) => node.is_selectable)?.id ?? null);
     if (!nextStage.nodes.some((node) => node.availability !== "coming_later")) {
       setFilter("all");
+    }
+  };
+
+  const openSession = async (node: RoadmapNode, mode: EntryMode) => {
+    if (node.active_session_id) {
+      onNavigate(`/learn/${node.active_session_id}`);
+      return;
+    }
+    if (roadmap.active_session && roadmap.active_session.target_node_id !== node.id) {
+      setPendingSwitch({ node, mode });
+      return;
+    }
+    setIsStarting(true);
+    setSessionError(null);
+    try {
+      await onStartSession(node.id, mode);
+    } catch (reason: unknown) {
+      setSessionError(reason instanceof Error ? reason.message : "学习会话启动失败");
+    } finally {
+      setIsStarting(false);
+    }
+  };
+
+  const abandonAndSwitch = async () => {
+    if (!pendingSwitch || !roadmap.active_session) return;
+    if (!window.confirm("确认结束当前会话并切换目标？已有学习证据会保留。")) return;
+    setIsStarting(true);
+    setSessionError(null);
+    try {
+      await onAbandonSession(roadmap.active_session.session_id, roadmap.active_session.version);
+      await onStartSession(pendingSwitch.node.id, pendingSwitch.mode);
+    } catch (reason: unknown) {
+      setSessionError(reason instanceof Error ? reason.message : "切换学习会话失败");
+      setPendingSwitch(null);
+      setIsStarting(false);
     }
   };
 
@@ -432,6 +510,13 @@ export function RoadmapDashboard({
             </div>
           )}
 
+          {sessionError && (
+            <div className="inline-error" role="alert">
+              <AlertCircle size={16} aria-hidden="true" />
+              {sessionError}
+            </div>
+          )}
+
           <div className="node-workspace">
             <div className="node-column">
               <div className="column-heading">
@@ -444,10 +529,32 @@ export function RoadmapDashboard({
                 onSelect={(node) => setSelectedNodeId(node.id)}
               />
             </div>
-            <NodeDetails node={selectedNode} />
+            <NodeDetails
+              node={selectedNode}
+              isStarting={isStarting}
+              onStart={(node, mode) => void openSession(node, mode)}
+            />
           </div>
         </section>
       </main>
+
+      {pendingSwitch && roadmap.active_session && (
+        <div className="dialog-backdrop" role="presentation">
+          <section className="session-dialog" role="dialog" aria-modal="true" aria-labelledby="active-session-title">
+            <h2 id="active-session-title">已有进行中的学习会话</h2>
+            <p>继续当前会话，或明确结束后切换到 {pendingSwitch.node.title}。</p>
+            <div>
+              <button type="button" onClick={() => onNavigate(`/learn/${roadmap.active_session!.session_id}`)}>
+                继续当前会话
+              </button>
+              <button className="danger" type="button" disabled={isStarting} onClick={() => void abandonAndSwitch()}>
+                结束并切换
+              </button>
+              <button type="button" onClick={() => setPendingSwitch(null)}>取消</button>
+            </div>
+          </section>
+        </div>
+      )}
 
       <footer className="statusbar">
         <span>CURRICULUM v0.1</span>

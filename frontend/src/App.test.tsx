@@ -30,6 +30,7 @@ function node(overrides: Partial<RoadmapNode>): RoadmapNode {
     progress_status: null,
     access_status: null,
     can_start_diagnostic_probe: false,
+    active_session_id: null,
     prerequisites: [],
     missing_prerequisites: [],
     recommended_next: [],
@@ -86,6 +87,7 @@ const roadmapFixture: RoadmapData = {
   stage_count: 9,
   pilot_node_count: 8,
   learner_state_available: true,
+  active_session: null,
   stages: stageNames.map(stage),
 };
 
@@ -95,6 +97,7 @@ function response(body: RoadmapData, ok = true): Response {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  window.history.replaceState({}, "", "/");
 });
 
 describe("roadmap application", () => {
@@ -112,10 +115,11 @@ describe("roadmap application", () => {
     expect(screen.getAllByText("RDMA Memory Registration").length).toBeGreaterThan(0);
     expect(screen.getByText("解释为什么 HCA 访问用户 buffer 前需要注册")).toBeVisible();
     expect(screen.getAllByText("LOCKED").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/\d+%/)).not.toBeInTheDocument();
     expect(screen.getByRole("region", { name: "缺失前置知识" })).toHaveTextContent(
       "Device DMA",
     );
-    expect(screen.getByRole("button", { name: "学习会话暂未开放" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "前置知识未满足" })).toBeDisabled();
 
     await user.click(screen.getByRole("button", { name: /全部节点/ }));
     const futureNode = screen.getByRole("button", { name: /RC \/ UD 等传输概念/ });
@@ -172,5 +176,50 @@ describe("roadmap application", () => {
       expect.objectContaining({ method: "POST" }),
     );
     expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("starts an available node and enters its Tutor Session route", async () => {
+    const session = {
+      session_id: "session-new",
+      version: 1,
+      status: "active",
+      mode: "normal",
+      target_node: { node_id: "device_dma", title: "Device DMA", learner_status: "ready", progress_status: "no_evidence" },
+      current_node: { node_id: "device_dma", title: "Device DMA", learner_status: "ready", progress_status: "no_evidence" },
+      return_stack: [],
+      expected_question: { question_id: "dma_q3_explain", node_id: "device_dma", prompt: "解释 DMA", response_type: "free_text", options: [] },
+      messages: [],
+      available_actions: {
+        can_submit_answer: true,
+        can_ask_side_question: true,
+        can_request_hint: true,
+        can_request_answer: true,
+        can_report_mastery: true,
+        can_abandon: true,
+      },
+      learner_state_summary: [],
+      roadmap_delta: [],
+      next_ready_node: null,
+      llm_mode: "mock",
+      recoverable_error: null,
+    };
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === "/api/roadmap") return response(roadmapFixture);
+      return { ok: true, status: 200, json: async () => session } as Response;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+
+    render(<App />);
+    await user.click(await screen.findByRole("button", { name: /Device DMA.*READY/ }));
+    await user.click(screen.getByRole("button", { name: "开始学习" }));
+
+    expect(await screen.findByText("解释 DMA")).toBeVisible();
+    expect(window.location.pathname).toBe("/learn/session-new");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/tutor/sessions",
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 });

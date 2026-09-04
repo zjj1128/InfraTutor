@@ -211,6 +211,11 @@ Roadmap 显示九阶段名称与顺序。
 
 模型失败后页面不中断会话，用户可重新提交。
 
+Phase 5 的默认自动化测试使用 Mock Provider 覆盖 Session start/resume/abandon、version/question
+冲突、`client_turn_id` 幂等、transcript reload、五类 LearnerTurn、Teacher fallback、reset cascade、
+QuestionView 脱敏和 API 级 Golden Path。React 测试覆盖 Roadmap 五种入口、两种 renderer、提交锁、
+补课提示、Debug Panel、错误恢复与纯文本 XSS 边界。Phase 6 才增加 Playwright 浏览器 E2E。
+
 ## 8. 非功能验收
 
 - Tutor Engine 中不存在具体模型厂商 SDK 调用。

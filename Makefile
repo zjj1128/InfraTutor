@@ -1,4 +1,4 @@
-.PHONY: setup dev backend frontend validate-curriculum generate-llm-schemas demo-tutor-engine demo-llm-mock smoke-llm-live test test-backend test-frontend lint build
+.PHONY: setup dev backend frontend validate-curriculum generate-llm-schemas demo-tutor-engine demo-llm-mock demo-tutor-session smoke-llm-live test test-backend test-frontend lint build
 
 setup:
 	uv sync --extra dev
@@ -8,7 +8,7 @@ dev:
 	./scripts/dev.sh
 
 backend:
-	.venv/bin/python -m uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
+	.venv/bin/python -m backend.app.core.run_backend
 
 frontend:
 	npm --prefix frontend run dev
@@ -24,6 +24,9 @@ demo-tutor-engine:
 
 demo-llm-mock:
 	.venv/bin/python -m backend.app.llm.demo
+
+demo-tutor-session:
+	.venv/bin/python -m backend.app.sessions.demo
 
 smoke-llm-live:
 	.venv/bin/python -m backend.app.llm.live_smoke

@@ -126,9 +126,16 @@ class SessionMode(StrEnum):
     LEARN = "learn"
 
 
+class EntryMode(StrEnum):
+    NORMAL = "normal"
+    DIAGNOSTIC = "diagnostic"
+    REVIEW = "review"
+
+
 class SessionStatus(StrEnum):
     ACTIVE = "active"
     COMPLETED = "completed"
+    ABANDONED = "abandoned"
 
 
 class TeacherDirective(StrictModel):
@@ -187,6 +194,8 @@ class LearningSessionView(StrictModel):
     session_id: str
     learner_id: str
     mode: SessionMode
+    entry_mode: EntryMode
+    version: int = Field(ge=1)
     target_node_id: str
     current_node_id: str
     expected_question_id: str | None

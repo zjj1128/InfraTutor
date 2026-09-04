@@ -22,6 +22,17 @@ class LearningSessionRepository:
         )
         return list(self.session.scalars(statement))
 
+    def get_active_for_learner(self, learner_id: str) -> LearningSession | None:
+        statement = (
+            select(LearningSession)
+            .where(
+                LearningSession.learner_id == learner_id,
+                LearningSession.status == "active",
+            )
+            .order_by(LearningSession.created_at.desc(), LearningSession.id.desc())
+        )
+        return self.session.scalar(statement)
+
 
 class DecisionTraceRepository:
     def __init__(self, session: Session) -> None:

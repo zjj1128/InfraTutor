@@ -10,6 +10,14 @@ export type ProgressStatus = "no_evidence" | "learning" | "partial" | "mastered"
 export type AccessStatus = "locked" | "available";
 export type SeedName = "clean" | "golden_path";
 
+export interface ActiveSessionSummary {
+  session_id: string;
+  target_node_id: string;
+  current_node_id: string;
+  version: number;
+  mode: "normal" | "diagnostic" | "review";
+}
+
 export interface NodeReference {
   id: string;
   title: string;
@@ -27,6 +35,7 @@ export interface RoadmapNode {
   progress_status: ProgressStatus | null;
   access_status: AccessStatus | null;
   can_start_diagnostic_probe: boolean;
+  active_session_id: string | null;
   prerequisites: NodeReference[];
   missing_prerequisites: NodeReference[];
   recommended_next: NodeReference[];
@@ -51,5 +60,6 @@ export interface RoadmapData {
   stage_count: number;
   pilot_node_count: number;
   learner_state_available: boolean;
+  active_session: ActiveSessionSummary | null;
   stages: RoadmapStage[];
 }

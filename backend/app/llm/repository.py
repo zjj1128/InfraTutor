@@ -52,3 +52,14 @@ class LLMCallRepository:
         )
         value = self.session.scalar(statement)
         return LLMErrorCode(value) if value else None
+
+    def list_for_turn(self, session_id: str, client_turn_id: str) -> list[LLMCallRecord]:
+        statement = (
+            select(LLMCallRecord)
+            .where(
+                LLMCallRecord.session_id == session_id,
+                LLMCallRecord.client_turn_id == client_turn_id,
+            )
+            .order_by(LLMCallRecord.created_at, LLMCallRecord.id)
+        )
+        return list(self.session.scalars(statement))

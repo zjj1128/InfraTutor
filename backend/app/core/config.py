@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./data/infratutor.db"
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     enable_debug_panel: bool = True
+    backend_host: str = "0.0.0.0"
+    backend_port: int = Field(default=8000, ge=1, le=65535)
+    frontend_host: str = "0.0.0.0"
+    frontend_port: int = Field(default=5173, ge=1, le=65535)
     curriculum_dir: Path = Field(default=PROJECT_ROOT / "curriculum")
     llm_mode: Literal["mock", "live"] = "mock"
     llm_provider: Literal["openai"] = "openai"

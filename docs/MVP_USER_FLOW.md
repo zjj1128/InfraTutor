@@ -156,7 +156,8 @@ mr_copies_memory_to_hca  Resolved
 lkey / rkey  Ready
 ```
 
-Tutor 执行 `ADVANCE`，进入 `lkey_rkey_concept` 的 ORIENT。
+Tutor 执行 `ADVANCE`，当前目标会话完成，并把 `lkey_rkey_concept` 作为下一个 Ready 节点展示；
+是否进入该节点由用户明确选择。
 
 用户应该直观感受到：
 
@@ -206,8 +207,11 @@ Tutor 可以分层处理：
 - 可在 Debug Panel 查看 `SCHEMA_VALIDATION_FAILED`。
 - 不向用户展示堆栈或 API Key。
 
-Phase 4 已实现上述后端恢复路径；Tutor Session UI 和页面错误呈现仍属于 Phase 5。Roadmap 的
-“学习会话暂未开放”按钮在 Phase 4 保持禁用，不通过临时聊天页暴露后端链路。
+Phase 5 已把上述恢复路径接入 Tutor Session UI。Assessor 失败保留输入和当前问题；Teacher 失败
+展示确定性 fallback，并保留已完成的 Assessment/Decision。刷新页面从 SessionMessage 恢复 transcript。
+
+同一 learner 只允许一个 active Session。同目标点击会恢复；切换目标时页面要求用户选择“继续当前
+会话”或确认“结束并切换”。abandon 不回滚已经形成的 Evidence、Mastery 或 Misconception。
 
 ## 8. Roadmap 展示
 

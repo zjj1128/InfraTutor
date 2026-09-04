@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from backend.app.curriculum.graph import CourseGraph, CourseNode
 from backend.app.curriculum.loader import CurriculumCatalog
 from backend.app.curriculum.models import AccessStatus, LearnerStatus, ProgressStatus
+from backend.app.sessions.schemas import ActiveSessionSummary
 
 
 class LearnerNodeStateLike(Protocol):
@@ -31,6 +32,7 @@ class RoadmapNodeView(BaseModel):
     progress_status: ProgressStatus | None = None
     access_status: AccessStatus | None = None
     can_start_diagnostic_probe: bool = False
+    active_session_id: str | None = None
     prerequisites: list[NodeReference]
     missing_prerequisites: list[NodeReference]
     recommended_next: list[NodeReference]
@@ -55,6 +57,7 @@ class RoadmapView(BaseModel):
     stage_count: int
     pilot_node_count: int
     learner_state_available: bool
+    active_session: ActiveSessionSummary | None = None
     stages: list[RoadmapStageView]
 
 
@@ -72,7 +75,10 @@ class CurriculumService:
         self.graph = CourseGraph(catalog)
 
     def roadmap_view(
-        self, learner_states: Mapping[str, LearnerNodeStateLike] | None = None
+        self,
+        learner_states: Mapping[str, LearnerNodeStateLike] | None = None,
+        *,
+        active_session: ActiveSessionSummary | None = None,
     ) -> RoadmapView:
         nodes_by_stage: dict[str, list[RoadmapNodeView]] = {
             stage.id: [] for stage in self.catalog.roadmap.stages
@@ -106,6 +112,11 @@ class CurriculumService:
                     progress_status=learner_state.progress_status if learner_state else None,
                     access_status=learner_state.access_status if learner_state else None,
                     can_start_diagnostic_probe=can_probe,
+                    active_session_id=(
+                        active_session.session_id
+                        if active_session and active_session.target_node_id == node.id
+                        else None
+                    ),
                     prerequisites=[
                         NodeReference(id=item.id, title=item.title)
                         for item in self.graph.direct_prerequisites(node.id)
@@ -149,5 +160,6 @@ class CurriculumService:
             stage_count=len(stages),
             pilot_node_count=len(self.catalog.pilot.nodes),
             learner_state_available=learner_states is not None,
+            active_session=active_session,
             stages=stages,
         )

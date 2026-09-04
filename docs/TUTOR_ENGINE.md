@@ -383,6 +383,15 @@ Teacher 必须遵守该指令，不得擅自 ADVANCE 或宣布 Mastered。
 
 调试面板用它回答：“为什么系统把我带回 DMA？”
 
+## 13.1 Session API 并发边界
+
+Phase 5 在 Engine 外增加应用层 Session 编排，但不复制 TutorPolicy。Session `version` 在每个进入
+Engine 的有效 Turn 中与 Evidence/Trace 同事务递增；客户端提交旧 version 或错误 question ID 时，
+请求在 Assessor 前拒绝。`client_turn_id` 在 Session 内唯一，重复请求返回第一次持久化 Snapshot。
+
+Engine 把原始 target 掌握后的 `ADVANCE` 作为下一节点建议；当前 Session 标记 completed，前端不能
+自动替 learner 创建下一 Session。
+
 ## 13. 必须避免的反模式
 
 - 让 LLM 返回 `mastery=0.9` 后直接写数据库。

@@ -259,8 +259,10 @@ class MockLLMGateway:
         if request.repair_context is not None and "schema-invalid-first-then-valid" in normalized:
             return True
         if request.question.question_id == "pin_q2_copy_check":
-            return normalized == "stable" or all(
-                token in normalized for token in ("稳定", "不", "复制")
+            return (
+                normalized == "stable"
+                or all(token in normalized for token in ("稳定", "不", "复制"))
+                or all(token in normalized for token in ("稳定", "原内存"))
             )
         node = request.question.node_id
         rules = {
@@ -300,6 +302,9 @@ class MockLLMGateway:
             return "给你一个提示：先区分控制工作和 payload 搬运。"
         if request.action.value == "ANSWER_SIDE_QUESTION":
             return "这个问题与当前主线相关；回答后我们继续原问题。"
+        if request.action.value == "TEACH":
+            fact = request.current_node.canonical_facts[0]
+            return f"直接讲解：{fact} 接下来换一道题重新确认。"
         return "我们继续当前学习目标。"
 
     def _record_failure(

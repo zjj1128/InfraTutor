@@ -86,6 +86,8 @@ Codex 应按阶段实现，每阶段完成后运行测试并提交可检查结�
 
 ## Phase 5：Tutor Session UI
 
+当前实现状态：完成。
+
 ### 交付
 
 - 开始 Session。
@@ -94,6 +96,9 @@ Codex 应按阶段实现，每阶段完成后运行测试并提交可检查结�
 - 当前节点与学习目标。
 - Debug Panel。
 - 状态变化刷新。
+- Session / Turn / Message 持久化与刷新恢复。
+- Session version、`client_turn_id` 幂等和 active Session 冲突处理。
+- 权威 QuestionView、后端 available actions 与开发态 Mock fixtures。
 
 ### 验收
 

@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import Engine, create_engine, event
+from sqlalchemy import Engine, create_engine, event, inspect, text
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -35,4 +35,29 @@ def create_session_factory(engine: Engine) -> sessionmaker[Session]:
 
 
 def initialize_database(engine: Engine) -> None:
+    # Import every model before create_all so standalone scripts and tests get
+    # the same metadata registration as the FastAPI application.
+    from backend.app.learner import models as learner_models  # noqa: F401
+    from backend.app.llm import models as llm_models  # noqa: F401
+    from backend.app.sessions import models as session_models  # noqa: F401
+    from backend.app.tutor import models as tutor_models  # noqa: F401
+
     Base.metadata.create_all(engine)
+    if (
+        engine.dialect.name != "sqlite"
+        or "learning_sessions" not in inspect(engine).get_table_names()
+    ):
+        return
+
+    columns = {item["name"] for item in inspect(engine).get_columns("learning_sessions")}
+    additions = {
+        "entry_mode": "VARCHAR(24) NOT NULL DEFAULT 'normal'",
+        "version": "INTEGER NOT NULL DEFAULT 1",
+        "recoverable_error_json": "JSON",
+    }
+    with engine.begin() as connection:
+        for name, definition in additions.items():
+            if name not in columns:
+                connection.execute(
+                    text(f"ALTER TABLE learning_sessions ADD COLUMN {name} {definition}")
+                )

@@ -1,9 +1,20 @@
 import { AlertTriangle, LoaderCircle, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
-import { fetchRoadmap, resetLearner } from "./api/client";
+import {
+  abandonTutorSession,
+  fetchRoadmap,
+  resetLearner,
+  startTutorSession,
+} from "./api/client";
 import { RoadmapDashboard } from "./components/RoadmapDashboard";
+import { TutorSessionPage } from "./components/TutorSessionPage";
 import type { RoadmapData, SeedName } from "./types/roadmap";
+import type { EntryMode } from "./types/session";
+
+function currentPath() {
+  return window.location.pathname;
+}
 
 export default function App() {
   const [roadmap, setRoadmap] = useState<RoadmapData | null>(null);
@@ -11,6 +22,18 @@ export default function App() {
   const [resetError, setResetError] = useState<string | null>(null);
   const [isResetting, setIsResetting] = useState(false);
   const [requestVersion, setRequestVersion] = useState(0);
+  const [path, setPath] = useState(currentPath);
+
+  const navigate = useCallback((nextPath: string) => {
+    window.history.pushState({}, "", nextPath);
+    setPath(nextPath);
+  }, []);
+
+  useEffect(() => {
+    const handlePopState = () => setPath(currentPath());
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   const retry = useCallback(() => {
     setRoadmap(null);
@@ -19,6 +42,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (path.startsWith("/learn/")) return;
     const controller = new AbortController();
 
     fetchRoadmap(controller.signal)
@@ -29,7 +53,7 @@ export default function App() {
       });
 
     return () => controller.abort();
-  }, [requestVersion]);
+  }, [path, requestVersion]);
 
   const handleReset = useCallback(async (seed: SeedName) => {
     setIsResetting(true);
@@ -43,6 +67,23 @@ export default function App() {
       setIsResetting(false);
     }
   }, []);
+
+  const handleStartSession = useCallback(
+    async (nodeId: string, entryMode: EntryMode) => {
+      const session = await startTutorSession(nodeId, entryMode);
+      navigate(`/learn/${session.session_id}`);
+    },
+    [navigate],
+  );
+
+  const handleAbandonSession = useCallback(async (sessionId: string, version: number) => {
+    await abandonTutorSession(sessionId, version);
+  }, []);
+
+  const sessionMatch = path.match(/^\/learn\/([^/]+)$/);
+  if (sessionMatch) {
+    return <TutorSessionPage sessionId={decodeURIComponent(sessionMatch[1])} onNavigate={navigate} />;
+  }
 
   if (error) {
     return (
@@ -73,6 +114,9 @@ export default function App() {
       onReset={handleReset}
       isResetting={isResetting}
       resetError={resetError}
+      onNavigate={navigate}
+      onStartSession={handleStartSession}
+      onAbandonSession={handleAbandonSession}
     />
   );
 }

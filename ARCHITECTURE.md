@@ -148,6 +148,7 @@ SQLite 保存：
 - Evidence。
 - Misconception State。
 - Conversation Turn。
+- Session Message。
 - Decision Trace。
 
 课程 YAML 仍是课程定义的唯一来源，不复制为可编辑数据库内容。
@@ -398,18 +399,37 @@ sequenceDiagram
 - `resolved_at`
 - `evidence_ids_json`
 
-### ConversationTurn
+### TutorTurnRecord
 
 - `id`
 - `session_id`
-- `role`
-- `content`
+- `client_turn_id`（Session 内唯一）
+- `learner_turn_kind`
+- `learner_text` 或 `option_id`
 - `question_id`
+- `session_version_before`
+- `status`
+- `assessment_result_json`
+- `decision_trace_id`
+- `tutor_message_id`
+- `recoverable_error_code`
 - `created_at`
 
-Phase 4 暂不开放 Tutor Session HTTP/UI，因此不提前持久化页面消息流；`LearnerTurn` 是应用层严格
-合同。LLM 调用只持久化脱敏 metadata：operation、mode/provider/model、prompt hash/version、
-attempt、latency、request ID、成功/错误码、可用的 token usage 和输入输出 hash。
+### SessionMessage
+
+- `session_id` + 递增 `sequence_number`
+- `role`：learner / tutor / system
+- `message_kind`、`text`、`question_id`、`interaction_type`
+- `client_turn_id`、`created_at`
+
+Phase 5 允许在本地 SQLite 保存用户可见 transcript。每个 Session 维护递增 `version`；Turn 以
+`(session_id, client_turn_id)` 唯一约束防止重复提交。QuestionView 从课程 assessment 构造，并在
+API DTO 中移除 `correct_option_ids`。LLM 调用仍只持久化脱敏 metadata：operation、mode/provider/model、
+prompt hash/version、attempt、latency、request ID、成功/错误码、可用 token usage 和输入输出 hash。
+
+一次 ANSWER Turn 分成短事务：先保留 Turn，事务外调用 Assessor，重新校验 version/question 后由
+Tutor Engine 在同一短事务写 Evidence、Misconception、Trace 和 Session version，再在事务外调用
+Teacher，最后保存消息。Assessor 失败不进入 Engine；Teacher 失败使用 fallback，且不重跑 Engine。
 
 ### DecisionTrace
 

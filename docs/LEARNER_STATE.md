@@ -324,3 +324,7 @@ active_misconceptions=[mr_copies_memory_to_hca]
 ```
 
 避免给学习者造成虚假精确感，同时保留开发与研究价值。
+
+Learner reset 删除默认 learner 时通过 SQLite 外键级联清除 LearningSession、TutorTurnRecord、
+SessionMessage、DecisionTrace 和 LLM metadata，再按所选 Seed 重建状态。abandon Session 则只改变
+Session 状态，不删除或回滚已经产生的 Evidence、Misconception 和 Mastery。
