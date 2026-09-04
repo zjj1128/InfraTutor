@@ -1,90 +1,233 @@
-# InfraTutor V0.1 项目设计包
+# InfraTutor V0.1
 
-InfraTutor 是一个面向高速互联部门新人的 AI 自适应学习 Web App。它不是“部门文档 + 聊天框”，而是由课程知识图谱、学习者状态、结构化评估和教学策略共同驱动的 Tutor 系统。
+InfraTutor 是面向高速互联新人的自适应学习 Web App。当前仓库已完成 `IMPLEMENTATION_PLAN.md` 的 Phase 0 至 Phase 4：课程图、Learner State、确定性 Tutor Engine，以及可替换的 LLM Gateway/Structured Output 后端链路已经就绪。
 
-本设计包的用途是：在正式编码前，先把产品目标、V0.1 范围、课程结构、数据模型、LLM 契约、教学策略、黄金路径和验收标准固定下来，避免 Codex 自行脑补需求后做成普通 AI 问答网站。
+当前版本仍不包含 Tutor Session Web UI。Phase 4 的 Mock/Live LLM 能力通过后端服务和开发命令验收，不提前制作聊天页面。
 
-## 已确认的核心决定
+## 当前能力
 
-- 默认学习者：刚毕业、具备普通计算机基础，但几乎没有 HPC / 高速互联经验的计算机专业新人。
-- 完整培训路线：共 9 个阶段，覆盖 Shell / Slurm / C、HIP / DCU、InfiniBand / RDMA、RDMA Verbs、MPI、UCX、RCCL、网络数据分析、网络设计与综合性能优化。
-- V0.1 产品形态：本地 WSL 单用户 Web App。
-- V0.1 教学切片：UI 展示完整九阶段路线，但真正跑通“虚拟/物理内存 → DMA → Pinned Memory → HCA → RDMA 数据路径 → Memory Registration → lkey/rkey 入门”。
-- Tutor 拥有学习流程控制权，可以阻止跳级、回退前置知识、追加问题或安排补课。
-- “学会”由证据决定，不以“看过课程”或学生自报完成为准。
-- “教什么”由人工课程设计控制；“怎么讲”可由 LLM 动态生成。
-- V0.1 不接入部门内部资料，不做 RAG、集群 SSH、Slurm 自动执行、多 Agent、自训练或本地模型。
-- 第一核心验收目标：跑通 Golden Path，系统能识别“MR 会把内存复制到 HCA”这一误解，回退补习 DMA / Pinned Memory，再回到 MR 并完成掌握判定。
+- React + TypeScript + Vite Roadmap，展示完整九阶段路线。
+- Stage 3 的 8 个 V0.1 pilot 节点可查看目标和前置关系。
+- planned 节点显示 `Coming Later`，不进入空白课程。
+- Roadmap 展示 `LOCKED / READY / LEARNING / PARTIAL / MASTERED / REVIEW NEEDED`，锁定节点列出缺失前置。
+- 固定 `default_learner`、Clean / Golden Path Seed 和 SQLite 持久化。
+- Learner、Node State、不可变 Evidence、Misconception 实体与 repository。
+- 确定性的 Evidence 权重、Mastery、Confidence、Mastered 门槛和 prerequisite 闭包。
+- 学习进度与节点访问性分离，Roadmap 同时返回 effective status、progress、access 和 probe 能力。
+- 持久化 LearningSession、return stack 与 DecisionTrace。
+- 按 P0-P7 优先级运行的确定性 TutorPolicy、Assessment Planner 和 remediation selector。
+- 每个 session/target 最多一次的低权重 target diagnostic probe。
+- 固定 Structured Assessment fixtures 驱动的 Golden Path 后端演示。
+- 严格 Pydantic Structured Output、语义白名单校验和后端 rubric 重算。
+- 模型无关 `LLMGateway`、无网络 Mock Provider 和 OpenAI Responses Live Adapter。
+- 明确的 `LearnerTurnKind` 路由、Assessor/Teacher 分离及一次 repair retry。
+- 安全的 LLM 调用 metadata 持久化，不记录 Key、完整 prompt 或完整回答。
+- FastAPI 健康检查、`GET /api/roadmap`、`GET /api/learner`、`GET /api/llm/status` 与 reset API。
+- Pydantic 课程模型与跨 YAML 校验。
+- prerequisite 环、重复 ID、未知引用、assessment / misconception 关联校验。
+- Course Graph 的节点、前置闭包、解锁和推荐后继查询。
+- 开发态 Roadmap 提供带确认的 Clean / Golden Path reset。
 
-## 建议阅读顺序
+## 环境要求
 
-1. `DECISIONS.md`
-2. `PROJECT_SPEC.md`
-3. `ARCHITECTURE.md`
-4. `docs/COURSE_DESIGN.md`
-5. `docs/LEARNER_STATE.md`
-6. `docs/LLM_CONTRACT.md`
-7. `docs/TUTOR_ENGINE.md`
-8. `docs/MVP_USER_FLOW.md`
-9. `docs/ACCEPTANCE_TESTS.md`
-10. `IMPLEMENTATION_PLAN.md`
-11. `AGENTS.md`
-12. `CODEX_START_PROMPT.md`
+- Python 3.11+
+- Node.js 22.12+
+- [uv](https://docs.astral.sh/uv/)
+- npm 10+
 
-## 目录说明
+## 安装
 
-```text
-InfraTutor_V0.1_Design_Package/
-├── README.md
-├── DECISIONS.md
-├── PROJECT_SPEC.md
-├── ARCHITECTURE.md
-├── IMPLEMENTATION_PLAN.md
-├── AGENTS.md
-├── CODEX_START_PROMPT.md
-├── .env.example
-├── docs/
-│   ├── COURSE_DESIGN.md
-│   ├── LEARNER_STATE.md
-│   ├── LLM_CONTRACT.md
-│   ├── TUTOR_ENGINE.md
-│   ├── MVP_USER_FLOW.md
-│   └── ACCEPTANCE_TESTS.md
-├── curriculum/
-│   ├── roadmap.yaml
-│   ├── v0_1_rdma_memory_registration.yaml
-│   └── v0_1_assessments.yaml
-├── schemas/
-│   ├── assessment_output.schema.json
-│   ├── tutor_message_output.schema.json
-│   └── learner_state.schema.json
-└── prompts/
-    ├── assessor_system.md
-    └── teacher_system.md
+```bash
+cp .env.example .env
+make setup
 ```
 
-## V0.1 的灵魂
+也可以分别安装：
 
-V0.1 只需要证明下面这条链成立：
-
-```text
-学生回答
-   ↓
-LLM 按 rubric 做结构化评估
-   ↓
-Tutor Engine 读取评估、Learner State 与课程前置关系
-   ↓
-确定 ASK / HINT / REMEDIATE / ADVANCE 等动作
-   ↓
-更新学习证据和状态
-   ↓
-LLM 按确定后的动作生成对学生的话
-   ↓
-继续下一轮
+```bash
+uv sync --extra dev
+npm install --prefix frontend
 ```
 
-LLM 负责语言理解、诊断辅助和表达；Tutor Engine 才拥有最终教学决策权。
+## 本地启动
 
-## 交给 Codex 前的操作
+一条命令同时启动前后端：
 
-把整个目录复制为项目根目录，或放进空仓库。随后将 `CODEX_START_PROMPT.md` 中的提示词交给 Codex。第一轮只实现 Phase 0 和 Phase 1，不要一次性让 Codex 完成全部系统。
+```bash
+make dev
+```
+
+- Web App: `http://127.0.0.1:5173`
+- API: `http://127.0.0.1:8000`
+- OpenAPI: `http://127.0.0.1:8000/docs`
+- Health: `http://127.0.0.1:8000/api/health`
+
+也可以在两个终端分别运行：
+
+```bash
+make backend
+make frontend
+```
+
+开发环境中 Vite 会将 `/api` 代理到本地 FastAPI。
+
+开发服务器监听 `0.0.0.0`。在 WSL2 中启动后，Windows 浏览器通常可直接访问上述 `127.0.0.1` 地址；若系统禁用了 localhost 转发，可改用 `hostname -I` 显示的 WSL 地址访问 5173 端口。
+
+## 校验与测试
+
+```bash
+make validate-curriculum
+make demo-tutor-engine
+make demo-llm-mock
+make test
+make lint
+make build
+```
+
+单独运行：
+
+```bash
+.venv/bin/pytest
+npm --prefix frontend test
+```
+
+测试和 `make demo-llm-mock` 不访问真实 LLM 或外部网络。`make smoke-llm-live` 是显式可选命令，不属于默认测试或 CI。
+
+## 课程校验范围
+
+后端同时加载：
+
+- `curriculum/roadmap.yaml`
+- `curriculum/v0_1_rdma_memory_registration.yaml`
+- `curriculum/v0_1_assessments.yaml`
+
+启动和 `make validate-curriculum` 会检查：
+
+- stage、node、assessment、criterion、misconception ID 唯一。
+- node 的 stage、prerequisite、recommended next、reinforces 引用存在。
+- prerequisite 图无环，并在失败时给出环路径。
+- pilot 节点与 roadmap 的类型、前置和实现状态一致。
+- assessment 与所属 node、rubric misconception、选项互相匹配。
+- target diagnostic probe、remediation node 与 seed 引用有效。
+- Mastered 所需 assessment 类型与独立题目数量在当前课程集合中可达到。
+
+任一校验失败都会阻止应用带着不完整课程图启动。
+
+## 项目结构
+
+```text
+backend/
+  app/
+    api/             # 薄 HTTP 路由
+    core/            # 环境配置
+    curriculum/      # Pydantic 模型、加载、校验、图查询
+    db/              # SQLAlchemy / SQLite 初始化
+    learner/         # 实体、repository、Seed、状态规则与 API DTO
+    tutor/           # Session、Trace、Policy、Planner、selector 与 fixtures
+    llm/             # contracts、Gateway、Provider、校验、应用服务与 metadata
+  tests/
+frontend/
+  src/
+    api/             # Roadmap API client
+    components/      # Roadmap dashboard
+    types/           # API DTO 类型
+curriculum/          # 人工课程事实来源
+docs/                # 产品与领域设计
+schemas/             # 由 Pydantic 生成的 LLM schema 与 learner schema
+```
+
+## API
+
+### `GET /api/health`
+
+确认 API、课程和数据库启动完成。
+
+### `GET /api/roadmap`
+
+返回按顺序排列的九个 Stage、节点实现范围、真实 `learner_status`、底层 `progress_status`、`access_status`、probe 能力、缺失前置、pilot 学习目标和推荐后继。
+
+### `GET /api/learner`
+
+返回固定 `default_learner` 的 profile、逐节点状态、Evidence ID 和 misconception 状态。
+
+### `GET /api/llm/status`
+
+只返回 mode、provider、模型/Key 是否已配置、`live_ready` 和可选的最后错误码；不会返回 Key 或 base URL。
+
+### `POST /api/demo/reset`
+
+开发态重置为 Clean Seed：
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/demo/reset \
+  -H 'Content-Type: application/json' \
+  -d '{"seed":"clean"}'
+```
+
+将 `clean` 替换为 `golden_path` 可载入 Golden Path Seed。reset 会清除当前本地学习状态并在单个事务中重建默认 learner；Web UI 调用前会要求确认。
+
+## 配置
+
+默认配置见 `.env.example`。基础配置：
+
+- `APP_ENV`
+- `DATABASE_URL`
+- `CORS_ORIGINS`
+- `ENABLE_DEBUG_PANEL`
+- `CURRICULUM_DIR`（可选，默认是仓库的 `curriculum/`）
+
+LLM 默认使用无需 Key 和网络的 Mock：
+
+```text
+LLM_MODE=mock
+LLM_PROVIDER=openai
+```
+
+启用 Live 时设置 `LLM_MODE=live`、`LLM_API_KEY`、`LLM_ASSESSOR_MODEL` 和
+`LLM_TEACHER_MODEL`。`LLM_BASE_URL` 可选；自定义 endpoint 必须支持 Responses API 与
+Structured Outputs，Adapter 不会偷偷回退到 Chat Completions。Assessor 和 Teacher 模型分开配置，
+也可以填同一个 model ID。
+
+可靠性参数：
+
+- `LLM_TIMEOUT_SECONDS=30`：单次传输超时。
+- `LLM_TRANSPORT_MAX_RETRIES=1`：SDK 对超时、连接、429/部分 5xx 的传输重试。
+- `LLM_REPAIR_RETRIES=1`：结构或课程语义校验失败后的修复重试。
+
+Live 配置缺失不会阻止应用启动；真正调用时会返回 `LLM_NOT_CONFIGURED`，不会静默降级为 Mock。
+
+## Tutor Engine 后端演示
+
+```bash
+make demo-tutor-engine
+```
+
+命令使用内存 SQLite、Golden Path Seed 和固定结构化 assessment fixtures，打印 MR probe、
+DMA/Pinned 补课、return stack、返回 MR、证据不足继续评估、最终解锁和完整 trace 摘要。
+它不访问网络或模型。
+
+## LLM Mock 演示
+
+```bash
+make demo-llm-mock
+```
+
+命令用自然语言“MR 会把内存复制到 HCA。”跑通 Assessor、后端 canonical 评估、Tutor
+Engine、Teacher 和 metadata，最终稳定得到 `REMEDIATE device_dma`。可选 Live 连通性检查：
+
+```bash
+make smoke-llm-live
+```
+
+缺少 Live 配置时该命令明确报告“未运行”，且不会输出 Key。
+
+## 后续 Phase
+
+- Phase 5：Tutor Session UI 与 Debug Panel。
+- Phase 6：Golden Path 浏览器 E2E。
+- Phase 7：可靠性与体验收尾。
+
+课程与教学规则以 `DECISIONS.md`、领域文档和 `IMPLEMENTATION_PLAN.md` 为准。
+
+Roadmap 中的“学习会话暂未开放”按钮仍为禁用状态。Phase 4 只实现后端模型链路；可进入的
+Tutor Session 页面属于 Phase 5，当前不会用临时聊天页替代。

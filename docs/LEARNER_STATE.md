@@ -25,7 +25,9 @@ V0.1 使用固定 `default_learner`。教学偏好仅作为 Teacher 表达参考
 
 每个知识节点拥有独立状态：
 
-- `status`
+- `status`（面向 UI 的 effective learner status）
+- `progress_status`
+- `access_status`（由前置闭包派生，不单独持久化）
 - `mastery_score`
 - `confidence_score`
 - `evidence_weight`
@@ -46,14 +48,24 @@ V0.1 使用固定 `default_learner`。教学偏好仅作为 Teacher 表达参考
 
 当前教学上下文：
 
-- 用户想达到的目标节点。
-- 当前实际节点。
-- 当前问题。
-- 期待的回答类型。
-- 补课返回栈。
-- 最近 Tutor 动作。
+- `learner_id`、`mode`。
+- `target_node_id`：用户想达到的目标节点。
+- `current_node_id`：当前实际节点。
+- `expected_question_id`：当前等待的课程问题。
+- `return_stack`：补课返回栈。
+- `status`、`last_action`、`current_assistance_level`。
+- `used_target_diagnostic_probes`：本 session 已消费的目标探针。
+- `created_at`、`updated_at`。
 
-## 3. UI 状态
+## 3. 学习进度、访问性与 UI 状态
+
+节点内部同时保留两个互不替代的维度：
+
+- `progress_status`：`no_evidence / learning / partial / mastered / review_needed`，只描述学习证据。
+- `access_status`：`locked / available`，只由 prerequisite 闭包和 supporting assumption 策略决定。
+
+UI 使用派生的 `learner_status`：访问性为 `locked` 时始终显示 `locked`；访问性为
+`available` 且进度为 `no_evidence` 时显示 `ready`；其余显示对应的学习进度。
 
 ### `locked`
 
@@ -182,14 +194,23 @@ confidence_score = max(0, confidence_score - 0.15)
 
 ## 7. Status 派生规则
 
-按以下优先级计算：
+先独立计算学习进度：
 
 1. 已经 mastered，但后续无提示评估 `< 0.50`：`review_needed`。
-2. 未满足 prerequisite：`locked`。
-3. 没有 Evidence：`ready`。
-4. `mastery_score < 0.55`：`learning`。
-5. 不满足 Mastered 门槛：`partial`。
-6. 满足全部 Mastered 门槛：`mastered`。
+2. 没有 Evidence：`no_evidence`。
+3. `mastery_score < 0.55`：`learning`。
+4. 不满足 Mastered 门槛：`partial`。
+5. 满足全部 Mastered 门槛：`mastered`。
+
+再计算访问性：完整 prerequisite 闭包未 Mastered 时为 `locked`，否则为 `available`。
+`learner_status` 最后合并这两个维度，因此 Golden Path 中的 `memory_registration` 可以同时是：
+
+```text
+progress_status = learning
+access_status = locked
+learner_status = locked
+can_start_diagnostic_probe = true
+```
 
 ## 8. Mastered 的硬性门槛
 
@@ -198,7 +219,7 @@ confidence_score = max(0, confidence_score - 0.15)
 - `mastery_score >= 0.80`。
 - `confidence_score >= 0.65`。
 - 至少两个独立 Evidence。
-- 至少一个无提示 `free_explanation` 或等价开放回答。
+- 至少一个无提示 `free_explanation`。
 - 至少一个无提示 `scenario_transfer`，或课程节点显式允许的替代证据。
 - 没有 `active` 的 critical misconception。
 - 必要 rubric criterion 均至少在一次无提示证据中被满足。
@@ -277,11 +298,12 @@ V0.1 提供两种 seed：
 - `pinned_memory`: partial
 - `hca_role`: mastered
 - `why_rdma`: mastered
-- `rdma_data_path`: partial
-- `memory_registration`: learning
+- `rdma_data_path`: progress mastered（0.86 mastery / 0.74 confidence；DMA 完成前 access locked）
+- `memory_registration`: progress learning / access locked / effective locked
 - `lkey_rkey_concept`: locked
 
-这样错误回答会稳定触发补课，而不是从第一节点完整学习。
+`rdma_data_path` 的基线避免它在 DMA/Pinned 补课完成后额外阻塞返回 MR。这个跳过只属于
+Golden Path Seed；Clean Seed 仍按完整课程依赖学习。
 
 ## 13. 状态展示原则
 

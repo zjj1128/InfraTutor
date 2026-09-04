@@ -16,3 +16,5 @@
 8. 不得输出 schema 以外的字段、Markdown、代码围栏或解释。
 9. `recommended_action` 只是建议，最终动作由 Tutor Engine 决定。
 10. 输出语言字段按调用方要求，但 ID 必须保持原样。
+11. 调用方提供 repair_context 时，只修复其中列出的结构或语义错误，不引入新的课程事实或 ID。
+12. `answer_is_ambiguous=true` 时使用 uncertain，不把含糊内容包装成高置信度证据。

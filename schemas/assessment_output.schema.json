@@ -1,9 +1,146 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://infratutor.local/schemas/assessment_output.schema.json",
-  "title": "InfraTutor Assessment Output",
-  "type": "object",
+  "$defs": {
+    "RecommendedAction": {
+      "enum": [
+        "ask_followup",
+        "hint",
+        "retry",
+        "remediate",
+        "assess_transfer",
+        "advance_candidate"
+      ],
+      "title": "RecommendedAction",
+      "type": "string"
+    },
+    "RubricResult": {
+      "additionalProperties": false,
+      "properties": {
+        "criterion_id": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Criterion Id",
+          "type": "string"
+        },
+        "evidence_span": {
+          "maxLength": 400,
+          "title": "Evidence Span",
+          "type": "string"
+        },
+        "result": {
+          "$ref": "#/$defs/RubricResultValue"
+        }
+      },
+      "required": [
+        "criterion_id",
+        "result",
+        "evidence_span"
+      ],
+      "title": "RubricResult",
+      "type": "object"
+    },
+    "RubricResultValue": {
+      "enum": [
+        "met",
+        "uncertain",
+        "not_met"
+      ],
+      "title": "RubricResultValue",
+      "type": "string"
+    },
+    "Understanding": {
+      "enum": [
+        "incorrect",
+        "partial",
+        "correct",
+        "uncertain"
+      ],
+      "title": "Understanding",
+      "type": "string"
+    }
+  },
   "additionalProperties": false,
+  "properties": {
+    "answer_is_ambiguous": {
+      "title": "Answer Is Ambiguous",
+      "type": "boolean"
+    },
+    "feedback_points": {
+      "items": {
+        "maxLength": 300,
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 4,
+      "title": "Feedback Points",
+      "type": "array"
+    },
+    "misconception_ids": {
+      "items": {
+        "maxLength": 120,
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 16,
+      "title": "Misconception Ids",
+      "type": "array"
+    },
+    "missing_concept_ids": {
+      "items": {
+        "maxLength": 120,
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 32,
+      "title": "Missing Concept Ids",
+      "type": "array"
+    },
+    "node_id": {
+      "maxLength": 120,
+      "minLength": 1,
+      "title": "Node Id",
+      "type": "string"
+    },
+    "question_id": {
+      "maxLength": 120,
+      "minLength": 1,
+      "title": "Question Id",
+      "type": "string"
+    },
+    "recommended_action": {
+      "$ref": "#/$defs/RecommendedAction"
+    },
+    "recommended_target_node_id": {
+      "anyOf": [
+        {
+          "maxLength": 120,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Recommended Target Node Id"
+    },
+    "rubric_results": {
+      "items": {
+        "$ref": "#/$defs/RubricResult"
+      },
+      "maxItems": 64,
+      "minItems": 1,
+      "title": "Rubric Results",
+      "type": "array"
+    },
+    "score": {
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Score",
+      "type": "number"
+    },
+    "understanding": {
+      "$ref": "#/$defs/Understanding"
+    }
+  },
   "required": [
     "question_id",
     "node_id",
@@ -17,88 +154,6 @@
     "recommended_action",
     "recommended_target_node_id"
   ],
-  "properties": {
-    "question_id": {
-      "type": "string",
-      "minLength": 1
-    },
-    "node_id": {
-      "type": "string",
-      "minLength": 1
-    },
-    "understanding": {
-      "type": "string",
-      "enum": ["incorrect", "partial", "correct", "uncertain"]
-    },
-    "score": {
-      "type": "number",
-      "minimum": 0,
-      "maximum": 1
-    },
-    "rubric_results": {
-      "type": "array",
-      "minItems": 1,
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["criterion_id", "result", "evidence_span"],
-        "properties": {
-          "criterion_id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "result": {
-            "type": "string",
-            "enum": ["met", "not_met", "uncertain"]
-          },
-          "evidence_span": {
-            "type": "string",
-            "maxLength": 400
-          }
-        }
-      }
-    },
-    "misconception_ids": {
-      "type": "array",
-      "uniqueItems": true,
-      "items": {
-        "type": "string",
-        "minLength": 1
-      }
-    },
-    "missing_concept_ids": {
-      "type": "array",
-      "uniqueItems": true,
-      "items": {
-        "type": "string",
-        "minLength": 1
-      }
-    },
-    "answer_is_ambiguous": {
-      "type": "boolean"
-    },
-    "feedback_points": {
-      "type": "array",
-      "maxItems": 4,
-      "items": {
-        "type": "string",
-        "minLength": 1,
-        "maxLength": 300
-      }
-    },
-    "recommended_action": {
-      "type": "string",
-      "enum": [
-        "ask_followup",
-        "hint",
-        "retry",
-        "remediate",
-        "assess_transfer",
-        "advance_candidate"
-      ]
-    },
-    "recommended_target_node_id": {
-      "type": ["string", "null"]
-    }
-  }
+  "title": "AssessmentResult",
+  "type": "object"
 }

@@ -58,6 +58,31 @@ assessments:
     - virtual_contiguous_means_physical_contiguous
   hints: []
   mock_fixtures: []
+- id: vm_q3_explain
+  node_id: virtual_vs_physical_memory
+  title: 从程序指针解释到物理页
+  question_type: free_text
+  evidence_type: free_explanation
+  prompt: 请解释普通程序中的指针、虚拟地址和物理页之间的关系，并说明一段虚拟连续内存为什么不保证物理连续。
+  rubric:
+    criteria:
+    - id: vm_q3_pointer_virtual
+      description: 说明程序指针通常表示当前进程的虚拟地址
+      weight: 0.3
+      required_for_mastery: true
+    - id: vm_q3_maps_physical_pages
+      description: 说明虚拟地址通过页表或等价映射对应物理页
+      weight: 0.35
+      required_for_mastery: true
+    - id: vm_q3_contiguity_differs
+      description: 明确虚拟连续不保证物理连续
+      weight: 0.35
+      required_for_mastery: true
+    critical_misconception_ids:
+    - virtual_address_is_physical_address
+    - virtual_contiguous_means_physical_contiguous
+  hints: []
+  mock_fixtures: []
 - id: dma_q1_actor
   node_id: device_dma
   title: 谁真正搬运 DMA 数据
@@ -121,6 +146,35 @@ assessments:
     - 搬运
     - 完成
     assessment: correct
+- id: dma_q3_explain
+  node_id: device_dma
+  title: 解释 DMA 的控制与搬运职责
+  question_type: free_text
+  evidence_type: free_explanation
+  prompt: 请解释一次 DMA 工作中 CPU/软件、设备或 DMA 引擎分别做什么，以及系统如何知道搬运已经完成。
+  rubric:
+    criteria:
+    - id: dma_q3_cpu_prepares
+      description: 说明 CPU/软件负责准备、配置或提交 DMA 工作
+      weight: 0.25
+      required_for_mastery: true
+    - id: dma_q3_engine_moves_payload
+      description: 说明设备或 DMA 引擎执行 payload 搬运
+      weight: 0.3
+      required_for_mastery: true
+    - id: dma_q3_no_cpu_copy_loop
+      description: 明确 CPU 不执行逐字节复制循环
+      weight: 0.2
+      required_for_mastery: true
+    - id: dma_q3_completion
+      description: 说明完成仍需通知、轮询或同步
+      weight: 0.25
+      required_for_mastery: true
+    critical_misconception_ids:
+    - dma_is_cpu_memcpy
+    - dma_needs_no_completion
+  hints: []
+  mock_fixtures: []
 - id: pin_q1_page_stability
   node_id: pinned_memory
   title: 设备访问期间页面为何要稳定
@@ -329,6 +383,44 @@ assessments:
     critical_misconception_ids:
     - remote_cpu_always_copies_payload
     - rdma_bypasses_all_software
+  hints: []
+  mock_fixtures: []
+- id: path_q3_explain
+  node_id: rdma_data_path
+  title: 解释端到端 RDMA 数据路径
+  question_type: free_text
+  evidence_type: free_explanation
+  prompt: 请从本地应用和内存开始，按顺序解释 payload 如何到达远端已授权内存，并区分 CPU 控制流与 payload 数据流。
+  rubric:
+    criteria:
+    - id: path_q3_local_application_memory
+      description: 说明路径从本地应用及其内存开始
+      weight: 0.15
+      required_for_mastery: true
+    - id: path_q3_local_hca
+      description: 说明本地 HCA 访问本地内存并发送数据
+      weight: 0.2
+      required_for_mastery: true
+    - id: path_q3_fabric
+      description: 说明 payload 经过 Fabric
+      weight: 0.15
+      required_for_mastery: true
+    - id: path_q3_remote_hca
+      description: 说明远端 HCA 接收并执行内存访问
+      weight: 0.15
+      required_for_mastery: true
+    - id: path_q3_remote_authorized_memory
+      description: 说明目标是远端已授权内存
+      weight: 0.15
+      required_for_mastery: true
+    - id: path_q3_control_vs_payload
+      description: 区分 CPU 的配置、提交、完成控制流与 HCA 搬运 payload 的数据流
+      weight: 0.2
+      required_for_mastery: true
+    critical_misconception_ids:
+    - rdma_bypasses_all_software
+    - remote_cpu_always_copies_payload
+    - rdma_can_access_any_remote_memory
   hints: []
   mock_fixtures: []
 - id: mr_q1_copy_check

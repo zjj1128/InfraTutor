@@ -129,9 +129,14 @@ class LLMGateway(Protocol):
 实现：
 
 - `MockLLMGateway`：自动化测试和无 Key 演示。
-- `LiveLLMGateway`：调用配置的外部模型。
+- `OpenAILiveGateway`：通过官方异步 SDK 调用 Responses Structured Outputs。
 
 上层不得依赖具体厂商消息格式。
+
+Phase 4 的应用层顺序固定为：`LearnerTurn -> AssessorService -> canonical AssessmentResult ->
+TutorEngine -> Decision/TeacherDirective -> TeacherService -> TutorMessageResult`。Assessor 的结构或
+语义校验失败发生在状态写入前；Teacher 失败发生在合法 Decision 之后，只降级消息，不重复执行
+Assessor 或写 Evidence。
 
 ### 3.8 Persistence
 
@@ -341,6 +346,10 @@ sequenceDiagram
 - `return_stack_json`
 - `expected_question_id`
 - `status`
+- `last_action`
+- `current_assistance_level`
+- `used_target_diagnostic_probes_json`
+- `current_question_is_diagnostic_probe`
 - `created_at`
 - `updated_at`
 
@@ -354,7 +363,8 @@ sequenceDiagram
 
 - `learner_id`
 - `node_id`
-- `status`
+- `status`（effective learner status）
+- `progress_status`
 - `mastery_score`
 - `confidence_score`
 - `evidence_weight`
@@ -397,17 +407,23 @@ sequenceDiagram
 - `question_id`
 - `created_at`
 
+Phase 4 暂不开放 Tutor Session HTTP/UI，因此不提前持久化页面消息流；`LearnerTurn` 是应用层严格
+合同。LLM 调用只持久化脱敏 metadata：operation、mode/provider/model、prompt hash/version、
+attempt、latency、request ID、成功/错误码、可用的 token usage 和输入输出 hash。
+
 ### DecisionTrace
 
 - `id`
 - `session_id`
-- `turn_id`
-- `assessment_json`
+- `assessment_summary_json`
+- `session_input_json`
+- `state_before_json`
 - `candidate_actions_json`
 - `final_action`
 - `target_node_id`
 - `reason_codes_json`
 - `state_delta_json`
+- `next_expected_question_id`
 - `created_at`
 
 ## 9. 错误与降级

@@ -65,6 +65,7 @@ nodes:
   - virtual_contiguous_means_physical_contiguous
   assessment_ids:
   - vm_q1_pointer_kind
+  - vm_q3_explain
   - vm_q2_translation_scenario
   teaching_moves:
   - 用 malloc buffer 与物理页示意图建立心智模型
@@ -102,6 +103,7 @@ nodes:
   - dma_needs_no_completion
   assessment_ids:
   - dma_q1_actor
+  - dma_q3_explain
   - dma_q2_scenario
   teaching_moves:
   - 画出 CPU、RAM、PCIe Device 三者的数据/控制流
@@ -250,6 +252,7 @@ nodes:
   - rdma_can_access_any_remote_memory
   assessment_ids:
   - path_q1_order
+  - path_q3_explain
   - path_q2_remote_scenario
   teaching_moves:
   - 让学习者排列数据路径组件
@@ -543,9 +546,9 @@ seeds:
         mastery_score: 0.84
         confidence_score: 0.7
       rdma_data_path:
-        status: partial
-        mastery_score: 0.64
-        confidence_score: 0.52
+        status: mastered
+        mastery_score: 0.86
+        confidence_score: 0.74
       memory_registration:
         status: learning
         mastery_score: 0.3

@@ -1,24 +1,16 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://infratutor.local/schemas/tutor_message_output.schema.json",
-  "title": "InfraTutor Tutor Message Output",
-  "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "student_message",
-    "interaction_type",
-    "expected_response_type",
-    "question_id",
-    "quick_replies"
-  ],
-  "properties": {
-    "student_message": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": 2000
+  "$defs": {
+    "ExpectedResponseType": {
+      "enum": [
+        "none",
+        "free_text",
+        "single_choice",
+        "multiple_choice"
+      ],
+      "title": "ExpectedResponseType",
+      "type": "string"
     },
-    "interaction_type": {
-      "type": "string",
+    "TutorInteractionType": {
       "enum": [
         "orientation",
         "explanation",
@@ -31,23 +23,56 @@
         "transition",
         "side_answer",
         "recoverable_error"
-      ]
-    },
+      ],
+      "title": "TutorInteractionType",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
     "expected_response_type": {
-      "type": "string",
-      "enum": ["none", "free_text", "single_choice", "multiple_choice"]
+      "$ref": "#/$defs/ExpectedResponseType"
+    },
+    "interaction_type": {
+      "$ref": "#/$defs/TutorInteractionType"
     },
     "question_id": {
-      "type": ["string", "null"]
+      "anyOf": [
+        {
+          "maxLength": 120,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Question Id"
     },
     "quick_replies": {
-      "type": "array",
-      "maxItems": 6,
       "items": {
-        "type": "string",
+        "maxLength": 120,
         "minLength": 1,
-        "maxLength": 120
-      }
+        "type": "string"
+      },
+      "maxItems": 6,
+      "title": "Quick Replies",
+      "type": "array"
+    },
+    "student_message": {
+      "maxLength": 2000,
+      "minLength": 1,
+      "title": "Student Message",
+      "type": "string"
     }
-  }
+  },
+  "required": [
+    "student_message",
+    "interaction_type",
+    "expected_response_type",
+    "question_id",
+    "quick_replies"
+  ],
+  "title": "TutorMessageResult",
+  "type": "object"
 }

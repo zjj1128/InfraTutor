@@ -288,6 +288,10 @@ async def handle_assessment_answer(session, learner, answer):
 
 ## 10. 非评估型输入
 
+应用层用显式 `LearnerTurnKind` 路由输入，不使用 LLM 意图分类。只有 `ANSWER` 进入 Assessor。
+`SIDE_QUESTION`、`REQUEST_HINT`、`REQUEST_ANSWER` 和 `SELF_REPORTED_MASTERY` 直接映射到这里的
+确定性规则。
+
 ### 学生提问
 
 若学生在等待回答问题时反问：
@@ -312,6 +316,12 @@ async def handle_assessment_answer(session, learner, answer):
 - 可作为主观反馈记录。
 - 不能更新 Mastery。
 - 下一动作应是短评估，而不是 ADVANCE。
+
+### 学生请求提示或答案
+
+- `REQUEST_HINT` 逐级提高 assistance level，但不产生 Evidence。
+- `REQUEST_ANSWER` 记录 `answer_revealed`，排除当前 question 后由 Assessment Planner 选择新题。
+- 后续回答即使正确也使用降低后的 Evidence 权重，不能把刚听到的答案直接当作 Mastered 证据。
 
 ## 11. Teacher Directive
 
@@ -351,7 +361,11 @@ Teacher 必须遵守该指令，不得擅自 ADVANCE 或宣布 Mastered。
   "state_before": {
     "device_dma": "partial",
     "pinned_memory": "partial",
-    "memory_registration": "learning"
+    "memory_registration": {
+      "progress_status": "learning",
+      "access_status": "locked",
+      "learner_status": "locked"
+    }
   },
   "candidate_actions": [
     {"action": "REMEDIATE", "target": "device_dma", "priority": 100},

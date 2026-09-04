@@ -50,12 +50,16 @@ Device DMA                  Partial
 Pinned Memory               Partial
 HCA Role                    Mastered
 Why RDMA                    Mastered
-RDMA Data Path              Partial
-Memory Registration         Learning
+RDMA Data Path              Locked (progress: Mastered; DMA 后显示 Mastered)
+Memory Registration         Locked (progress: Learning, diagnostic probe allowed)
 lkey / rkey                 Locked
 ```
 
 目标节点：`memory_registration`。
+
+这里 `rdma_data_path` 使用已掌握基线，确保演示只经过 DMA 与 Pinned Memory 两个补课节点。
+Clean Seed 不使用这项跳过。MR 的正式学习仍被 prerequisite 锁定；本轮只允许课程声明的
+`mr_q1_copy_check` 作为一次低权重 target diagnostic probe。
 
 ### 3.2 第一轮：暴露误解
 
@@ -202,6 +206,9 @@ Tutor 可以分层处理：
 - 可在 Debug Panel 查看 `SCHEMA_VALIDATION_FAILED`。
 - 不向用户展示堆栈或 API Key。
 
+Phase 4 已实现上述后端恢复路径；Tutor Session UI 和页面错误呈现仍属于 Phase 5。Roadmap 的
+“学习会话暂未开放”按钮在 Phase 4 保持禁用，不通过临时聊天页暴露后端链路。
+
 ## 8. Roadmap 展示
 
 建议视觉层级：
@@ -215,8 +222,8 @@ Stage 3  InfiniBand / RDMA 理论             In Progress
    ├─ Pinned Memory                         Partial
    ├─ HCA Role                              Mastered
    ├─ Why RDMA                              Mastered
-   ├─ RDMA Data Path                        Partial
-   ├─ Memory Registration                   Learning
+   ├─ RDMA Data Path                        Locked (progress: Mastered)
+   ├─ Memory Registration                   Locked (progress: Learning)
    └─ lkey / rkey                           Locked
 Stage 4  RDMA Verbs                         Coming Later
 ...

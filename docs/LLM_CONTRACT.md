@@ -212,6 +212,19 @@ Teacher：按动作生成下一条消息
 
 V0.1 不使用“一个大 prompt 同时评估、更新状态、决定路线和写回复”，因为难以测试与追溯。
 
+### LearnerTurn 应用层契约
+
+Phase 4 不增加意图分类模型。客户端必须显式提交 `LearnerTurnKind`：
+
+- `ANSWER`：调用 Assessor，校验成功后才进入 Tutor Engine 的有效评估分支。
+- `SIDE_QUESTION`：不调用 Assessor、不写 Evidence，Teacher 按 `ANSWER_SIDE_QUESTION` 表达。
+- `REQUEST_HINT`：不调用 Assessor，Tutor Engine 提升 assistance level。
+- `REQUEST_ANSWER`：不调用 Assessor，记录 `answer_revealed` 并换一题再评估。
+- `SELF_REPORTED_MASTERY`：不改变 Mastery，Tutor Engine 选择短评估。
+
+`LearnerTurn` 还包含原始文本、幂等用 `client_turn_id` 和客户端提交时间。Phase 5 UI 将用明确的
+按钮或输入模式设置 kind，而不是让第三个 LLM 猜意图。
+
 ## 11. Schema 校验与重试
 
 1. 使用 Pydantic / JSON Schema 校验。
@@ -222,6 +235,17 @@ V0.1 不使用“一个大 prompt 同时评估、更新状态、决定路线和�
    - 不改变 Learner State。
    - 返回“本轮评估未成功，请重试”。
    - 保存技术错误。
+
+运行时唯一事实源是 Pydantic v2 model；`schemas/assessment_output.schema.json` 和
+`schemas/tutor_message_output.schema.json` 由 `model_json_schema()` 生成，并由测试检查不漂移。
+
+结构校验负责字段、Enum、长度、必填项和额外字段；课程语义校验负责 question/node 对齐、rubric
+完整且不重复、ID 白名单、missing concept 相关范围和 evidence span 来源。模型分数只做一致性检查，
+后端按 `met=1 / uncertain=0.5 / not_met=0` 与课程权重重新计算 canonical score。
+
+传输重试由 SDK 的 `LLM_TRANSPORT_MAX_RETRIES` 处理；结构/语义 repair 由应用层的
+`LLM_REPAIR_RETRIES` 处理。repair 只携带原请求必要事实、首次输出、具体错误、schema 和 allowed
+IDs，不增加课程事实。
 
 ## 12. Prompt Injection 防护
 
@@ -270,10 +294,18 @@ Mock 的目的不是模拟真实语言能力，而是稳定验证 Tutor Engine �
 
 ```text
 LLM_MODE=mock|live
-LLM_PROVIDER=<adapter name>
-LLM_MODEL=<deployment/model identifier>
+LLM_PROVIDER=openai
+LLM_ASSESSOR_MODEL=<deployment/model identifier>
+LLM_TEACHER_MODEL=<deployment/model identifier>
 LLM_API_KEY=<secret>
 LLM_BASE_URL=<optional>
+LLM_TIMEOUT_SECONDS=30
+LLM_TRANSPORT_MAX_RETRIES=1
+LLM_REPAIR_RETRIES=1
 ```
 
 代码不得把某个具体模型名称写死在领域层。模型选择属于部署配置，不属于课程逻辑。
+
+OpenAI Adapter 使用 `AsyncOpenAI.responses.parse()`、Pydantic `text_format` 和
+`response.output_parsed`。只有 Adapter 能看到厂商对象；上层只接触 `LLMGateway` Protocol 和项目
+合同。Live 缺少 Key/模型时应用仍启动，调用返回 `LLM_NOT_CONFIGURED`；不会自动改用 Mock。
